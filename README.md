@@ -1,5 +1,7 @@
 # PlayStation Data Donation App
 
+> ⚠️ **BETA VERSION**: This application is currently in beta. Users may encounter bugs or unexpected behavior. Please report any issues to the development team.
+
 A React application that allows users to donate their PlayStation data for academic research while maintaining full control over what data is shared.
 
 ## 🚀 Live Demo
