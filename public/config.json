@@ -1,0 +1,71 @@
+{
+  "general": {
+    "displaySubmissionId": true,
+    "parser": "playstationParser"
+  },
+  "header": {
+    "title": "Universal Digital Donor",
+    "logo": "/playstation-svgrepo-com.svg"
+  },
+  "page": {
+    "consent": {
+      "title": "Playstation Study",
+      "intro": "You are about to start the process of donating your Playstation data to our Playstation study. The data that we ask you to donate will be used for academic research to gain insight into how platforms work.",
+      "process": "We will walk you through this process step by step. During this process no data is stored or sent to a server. You can delete rows from the data before donating. Data will only be donated and stored when you click the button \"Yes, donate\" on the page that shows your data.",
+      "donationAgreement": "By clicking the button \"Yes, donate\":",
+      "agreementPoints": [
+        "you fully and voluntarily agree to donate your data for this research.",
+        "you are aware that when your data is used for academic publications, or made publicly available in some other form, this will be anonymous.",
+        "you are aware that you have the right to withdraw your permission."
+      ],
+      "agreementCheckbox": "I have read and agree with the above terms.",
+      "agreeButton": "I Agree"
+    },
+    "upload": {
+      "title": "Upload File",
+      "intro": "Please follow the download instructions and choose the file that you stored on your device.",
+      "uploadButton": "Upload file",
+      "selectedFile": "Selected file: ",
+      "processing": "Processing your file... This may take a few moments.",
+      "noDataFound": "No PlayStation Data Found",
+      "incorrectFile": "The uploaded file might be incorrect, corrupted, or void of PlayStation data.",
+      "possibleIssues": "We were unable to find any recognizable PlayStation data in the uploaded file. This could mean:",
+      "issuePoints": [
+        "The file is not a PlayStation data export",
+        "The file format has changed",
+        "The file is corrupted or incomplete",
+        "The wrong file was selected",
+        "The file contains no actual data"
+      ],
+      "unparseableSheets": "Unparseable sheets:",
+      "checkFile": "Please check that you have uploaded the correct PlayStation data file or contact the researchers for assistance.",
+      "tryAgainButton": "Try Again",
+      "note": "Note: The process to extract the correct data from the file is done on your own computer. No data is stored or sent yet. Extraction may take several seconds depending on the data size.",
+      "processingButton": "Processing...",
+      "proceedButton": "Proceed"
+    },
+    "filter": {
+      "loading": "Loading...",
+      "loadingData": "Loading data...",
+      "dataOverview": "Data overview",
+      "intro": "Determine whether you would like to donate the data below. Carefully check the data and adjust when required. With your donation you contribute to the previously described research. Thank you in advance.",
+      "deleteSelectedRows": "Delete selected rows",
+      "donationPrompt": "Do you want to donate the above data?",
+      "donateButton": "Yes, donate",
+      "declineButton": "No",
+      "note": "Note: Sending the data may take several seconds depending on the data size."
+    },
+    "thankyou": {
+      "title": "Thank You!",
+      "successMessage": "Your data has been successfully submitted. Thank you for your contribution!",
+      "submissionId": "Your Submission ID:",
+      "copyId": "Copy ID",
+      "saveId": "Please save this ID for your records.",
+      "declineMessage": "Thank you for your time. Your decision has been recorded and no data has been shared.",
+      "copyToClipboard": {
+        "copy": "Copy to clipboard",
+        "copied": "Copied!"
+      }
+    }
+  }
+}
