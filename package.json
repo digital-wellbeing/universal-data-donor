@@ -2,6 +2,7 @@
   "name": "data-donation-app",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://digital-wellbeing.github.io/universal-data-donor",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
