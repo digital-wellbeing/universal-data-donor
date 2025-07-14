@@ -23,7 +23,7 @@ const ConsentPage = () => {
         <div className="card-header">
           <div className="d-flex align-items-center gap-3">
             <img
-              src="/playstation-svgrepo-com.svg"
+              src={process.env.PUBLIC_URL + "/playstation-svgrepo-com.svg"}
               alt="PlayStation Logo"
               width="40"
               height="40"
