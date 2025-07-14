@@ -2,6 +2,10 @@
 
 A React application that allows users to donate their PlayStation data for academic research while maintaining full control over what data is shared.
 
+## 🚀 Live Demo
+
+Try the application here: **[https://digital-wellbeing.github.io/universal-data-donor/](https://digital-wellbeing.github.io/universal-data-donor/)**
+
 ## Features
 
 ### Data Upload & Processing
