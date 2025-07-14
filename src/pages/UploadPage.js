@@ -12,7 +12,7 @@ const UploadPage = ({ setParsedData }) => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [parsingWarning, setParsingWarning] = useState(null);
-  const [parsedDataCache, setParsedDataCache] = useState(null);
+  const [parsedDataCache, setParsedDataCache] = useState(null); // eslint-disable-line no-unused-vars
   const navigate = useNavigate();
 
   if (!config || !config.page || !config.page.upload) {
