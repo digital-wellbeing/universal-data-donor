@@ -3,7 +3,7 @@ import path from 'path';
 
 describe('playstationParser', () => {
   it('should parse the Playstation Excel file and extract the correct columns', async () => {
-    const filePath = path.resolve(__dirname, '../../tests/sonyJun24.xlsx');
+    const filePath = path.resolve(__dirname, '../../tests/sonysample.xlsx');
     const parseResult = await parsePlaystationFile(filePath);
 
     // Expect the parser to return an object with data and parsingErrors
@@ -61,7 +61,7 @@ describe('playstationParser', () => {
   });
 
   it('should track parsing errors correctly', async () => {
-    const filePath = path.resolve(__dirname, '../../tests/sonyJun24.xlsx');
+    const filePath = path.resolve(__dirname, '../../tests/sonysample.xlsx');
     const parseResult = await parsePlaystationFile(filePath);
 
     // Verify parsing errors structure
