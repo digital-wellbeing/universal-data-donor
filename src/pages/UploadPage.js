@@ -4,7 +4,7 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
-import { parsePlaystationFile } from '../parsers/playstationParser';
+import { getParser } from '../utils/parserFactory';
 import { useConfig } from '../ConfigContext';
 
 const UploadPage = ({ setParsedData }) => {
@@ -50,8 +50,10 @@ const UploadPage = ({ setParsedData }) => {
     if (file) {
       setLoading(true);
       try {
+        // Dynamically load the parser based on config
+        const parser = await getParser(config.general.parser);
         // Parse the file before navigating
-        const parseResult = await parsePlaystationFile(file);
+        const parseResult = await parser(file);
         const parsed = parseResult.data;
         const parsingErrors = parseResult.parsingErrors;
         
@@ -135,7 +137,7 @@ const UploadPage = ({ setParsedData }) => {
                 type="file"
                 hidden
                 onChange={handleFileChange}
-                accept=".xlsx"
+                accept={config.general.fileExtensions.join(',')}
               />
             </Button>
           </div>
@@ -220,4 +222,4 @@ const UploadPage = ({ setParsedData }) => {
   );
 };
 
-export default UploadPage;
+export default UploadPage
