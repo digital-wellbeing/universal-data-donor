@@ -5,6 +5,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
 import { getParser } from '../utils/parserFactory';
+import { getValidator } from '../utils/validatorFactory';
 import { useConfig } from '../ConfigContext';
 
 const UploadPage = ({ setParsedData }) => {
@@ -29,22 +30,6 @@ const UploadPage = ({ setParsedData }) => {
     }
   };
 
-  // Function to check if parsing errors indicate a potentially incorrect file
-  const checkForSignificantParsingErrors = (parsingErrors, parsedData) => {
-    // Check if there's at least one non-empty sheet with actual data
-    let hasNonEmptySheet = false;
-    
-    for (const sheetName in parsedData) {
-      const sheetData = parsedData[sheetName];
-      if (sheetData && sheetData.length > 0) {
-        hasNonEmptySheet = true;
-        break;
-      }
-    }
-    
-    // If no sheets have any data, show warning
-    return !hasNonEmptySheet;
-  };
 
   const handleProceed = async () => {
     if (file) {
@@ -57,8 +42,11 @@ const UploadPage = ({ setParsedData }) => {
         const parsed = parseResult.data;
         const parsingErrors = parseResult.parsingErrors;
         
-        // Check for significant parsing errors
-        if (checkForSignificantParsingErrors(parsingErrors, parsed)) {
+        // Dynamically load the validator based on config
+        const validator = await getValidator(config.general.validator);
+        const validationResult = await validator(parseResult);
+
+        if (!validationResult.valid) {
           // Cache the parsed data but show warning instead of proceeding
           setParsedDataCache({ parsed, parsingErrors });
           setParsingWarning({

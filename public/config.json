@@ -3,6 +3,7 @@
     "displaySubmissionId": true,
     "platform": "PlayStation",
     "parser": "playstationParser",
+    "validator": "playstationValidator",
     "fileExtensions": [".xlsx"]
   },
   "header": {

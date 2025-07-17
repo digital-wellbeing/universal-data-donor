@@ -3,14 +3,17 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import UploadPage from './UploadPage';
 import { getParser } from '../utils/parserFactory';
+import { getValidator } from '../utils/validatorFactory';
 import { ConfigContext } from '../ConfigContext';
 import config from '../../public/config.json';
 
 // Mock the parser factory to return a mocked parser function
 jest.mock('../utils/parserFactory');
+jest.mock('../utils/validatorFactory');
 
 // Mock parser function that will be returned by getParser
 const mockParser = jest.fn();
+const mockValidator = jest.fn();
 
 
 const mockSetParsedData = jest.fn();
@@ -36,6 +39,7 @@ describe('UploadPage Failsafe', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     getParser.mockResolvedValue(mockParser);
+    getValidator.mockResolvedValue(mockValidator);
   });
 
   it('should show warning when no sheets contain data', async () => {
@@ -83,6 +87,7 @@ describe('UploadPage Failsafe', () => {
     };
 
     mockParser.mockResolvedValue(mockParseResult);
+    mockValidator.mockResolvedValue({ valid: false });
 
     renderUploadPage();
 
@@ -145,6 +150,7 @@ describe('UploadPage Failsafe', () => {
     };
 
     mockParser.mockResolvedValue(mockParseResult);
+    mockValidator.mockResolvedValue({ valid: true });
 
     renderUploadPage();
 
@@ -198,6 +204,7 @@ describe('UploadPage Failsafe', () => {
     };
 
     mockParser.mockResolvedValue(mockParseResult);
+    mockValidator.mockResolvedValue({ valid: false });
 
     renderUploadPage();
 
