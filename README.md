@@ -111,6 +111,7 @@ The build is optimized and minified for deployment.
 
 ### Recent Updates
 - **File Validation Failsafe**: Added intelligent detection for incorrect or corrupted PlayStation data files
+- **Platform-Specific Validators**: Configurable validators ensure uploaded files contain usable data
 - **Data Donation Enhancement**: Added comprehensive JSON export functionality
 - **Privacy Controls**: Implemented automatic removal of internal application fields
 - **Deletion Tracking**: Added per-table deleted row count tracking
