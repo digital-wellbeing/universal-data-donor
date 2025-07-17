@@ -23,8 +23,8 @@ const ConsentPage = () => {
         <div className="card-header">
           <div className="d-flex align-items-center gap-3">
             <img
-              src={process.env.PUBLIC_URL + "/playstation-svgrepo-com.svg"}
-              alt="PlayStation Logo"
+              src={process.env.PUBLIC_URL + config.header.logo}
+              alt={config.header.logoAlt}
               width="40"
               height="40"
               style={{ flexShrink: 0, marginRight: '12px' }}
@@ -66,4 +66,5 @@ const ConsentPage = () => {
   );
 };
 
-export default ConsentPage;
+export default ConsentPage
+
