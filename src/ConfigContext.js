@@ -14,7 +14,7 @@ export const ConfigProvider = ({ children }) => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const response = await fetch('./config.json');
+        const response = await fetch(`${process.env.PUBLIC_URL}/config.json`);
         if (!response.ok) {
           throw new Error('Failed to fetch config');
         }
