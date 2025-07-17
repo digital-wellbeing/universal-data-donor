@@ -310,3 +310,5 @@ export const filterData = (parsedData, filters) => {
   }
   return filteredData;
 };
+
+export default parsePlaystationFile;

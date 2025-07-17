@@ -2,10 +2,16 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import UploadPage from './UploadPage';
-import { parsePlaystationFile } from '../parsers/playstationParser';
+import { getParser } from '../utils/parserFactory';
+import { ConfigContext } from '../ConfigContext';
+import config from '../../public/config.json';
 
-// Mock the parser
-jest.mock('../parsers/playstationParser');
+// Mock the parser factory to return a mocked parser function
+jest.mock('../utils/parserFactory');
+
+// Mock parser function that will be returned by getParser
+const mockParser = jest.fn();
+
 
 const mockSetParsedData = jest.fn();
 const mockNavigate = jest.fn();
@@ -18,15 +24,18 @@ jest.mock('react-router-dom', () => ({
 
 const renderUploadPage = () => {
   return render(
-    <BrowserRouter>
-      <UploadPage setParsedData={mockSetParsedData} />
-    </BrowserRouter>
+    <ConfigContext.Provider value={config}>
+      <BrowserRouter>
+        <UploadPage setParsedData={mockSetParsedData} />
+      </BrowserRouter>
+    </ConfigContext.Provider>
   );
 };
 
 describe('UploadPage Failsafe', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    getParser.mockResolvedValue(mockParser);
   });
 
   it('should show warning when no sheets contain data', async () => {
@@ -73,7 +82,7 @@ describe('UploadPage Failsafe', () => {
       }
     };
 
-    parsePlaystationFile.mockResolvedValue(mockParseResult);
+    mockParser.mockResolvedValue(mockParseResult);
 
     renderUploadPage();
 
@@ -135,7 +144,7 @@ describe('UploadPage Failsafe', () => {
       }
     };
 
-    parsePlaystationFile.mockResolvedValue(mockParseResult);
+    mockParser.mockResolvedValue(mockParseResult);
 
     renderUploadPage();
 
@@ -188,7 +197,7 @@ describe('UploadPage Failsafe', () => {
       }
     };
 
-    parsePlaystationFile.mockResolvedValue(mockParseResult);
+    mockParser.mockResolvedValue(mockParseResult);
 
     renderUploadPage();
 
@@ -214,4 +223,5 @@ describe('UploadPage Failsafe', () => {
     // Verify that navigation was not called (user should see warning first)
     expect(mockNavigate).not.toHaveBeenCalled();
   });
-}); 
+});
+

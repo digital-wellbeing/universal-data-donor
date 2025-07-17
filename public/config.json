@@ -1,11 +1,14 @@
 {
   "general": {
     "displaySubmissionId": true,
-    "parser": "playstationParser"
+    "platform": "PlayStation",
+    "parser": "playstationParser",
+    "fileExtensions": [".xlsx"]
   },
   "header": {
     "title": "Universal Digital Donor",
-    "logo": "/playstation-svgrepo-com.svg"
+    "logo": "/playstation-svgrepo-com.svg",
+    "logoAlt": "PlayStation Logo"
   },
   "page": {
     "consent": {
