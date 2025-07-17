@@ -1,8 +1,13 @@
+const parserImporters = {
+  playstationParser: () => import('../parsers/playstationParser.js'),
+};
+
 export const getParser = async (parserName) => {
-  if (!parserName) {
-    throw new Error('Parser name not provided');
+  const importer = parserImporters[parserName];
+  if (!importer) {
+    throw new Error(`Unknown parser: ${parserName}`);
   }
-  const module = await import(`../parsers/${parserName}.js`);
+  const module = await importer();
   return module.default;
 };
 
