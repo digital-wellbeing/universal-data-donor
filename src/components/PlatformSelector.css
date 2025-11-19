@@ -1,0 +1,127 @@
+.platform-selector-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 0;
+}
+
+.platform-selector-container {
+  max-width: 1200px;
+}
+
+.platform-selector-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.platform-selector-subtitle {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 300;
+}
+
+.platform-card {
+  transition: all 0.3s ease;
+  border-width: 3px;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.platform-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.platform-logo-container {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 50%;
+  padding: 1.5rem;
+}
+
+.platform-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.platform-name {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.platform-description {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.platform-select-btn {
+  transition: all 0.2s ease;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  width: 100%;
+}
+
+.platform-select-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.platform-select-btn:active {
+  transform: scale(0.98);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .platform-selector-title {
+    font-size: 2rem;
+  }
+
+  .platform-selector-subtitle {
+    font-size: 1rem;
+  }
+
+  .platform-logo-container {
+    width: 100px;
+    height: 100px;
+  }
+
+  .platform-name {
+    font-size: 1.5rem;
+  }
+
+  .platform-card {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.platform-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.platform-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
