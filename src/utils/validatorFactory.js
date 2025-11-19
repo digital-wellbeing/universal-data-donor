@@ -1,5 +1,6 @@
 const validatorImporters = {
   playstationValidator: () => import('../validators/playstationValidator.js'),
+  androidValidator: () => import('../validators/androidValidator.js'),
 };
 
 export const getValidator = async (validatorName) => {
