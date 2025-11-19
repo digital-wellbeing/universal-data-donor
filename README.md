@@ -1,21 +1,34 @@
-# PlayStation Data Donation App
+# Universal Data Donor
 
 > ⚠️ **BETA VERSION**: This application is currently in beta. Users may encounter bugs or unexpected behavior. Please report any issues to the development team.
 
-A React application that allows users to donate their PlayStation data for academic research while maintaining full control over what data is shared.
+A React application that allows users to donate their gaming platform data for academic research while maintaining full control over what data is shared. Currently supports:
+- **PlayStation** data exports (.xlsx)
+- **Google Play Games Services** data from Google Takeout (.zip)
 
 ## 🚀 Live Demo
 
-Try the application here: **[https://digital-wellbeing.github.io/universal-data-donor/](https://digital-wellbeing.github.io/universal-data-donor/)**
+Try the application here:
+- **PlayStation**: [https://digital-wellbeing.github.io/universal-data-donor/?platform=playstation](https://digital-wellbeing.github.io/universal-data-donor/?platform=playstation)
+- **Google Play Games**: [https://digital-wellbeing.github.io/universal-data-donor/?platform=android](https://digital-wellbeing.github.io/universal-data-donor/?platform=android)
+
+> **Note**: Use the `?platform=` URL parameter to select the platform. Defaults to PlayStation if no parameter is provided.
 
 ## Features
 
+### Multi-Platform Support
+- **PlayStation**: Upload PlayStation data files (.xlsx format)
+- **Google Play Games**: Upload Google Takeout files (.zip format) containing Google Play Games Services data
+- Platform selection via URL parameter (`?platform=playstation` or `?platform=android`)
+- Automatic format detection for Google Play data (JSON or HTML)
+
 ### Data Upload & Processing
-- Upload PlayStation data files (.xlsx format)
 - Automatic parsing and extraction of relevant data tables
-- Support for multiple data categories (Account Device, Gameplay Online, Transaction Details, etc.)
+- Support for multiple data categories per platform
+- **PlayStation**: Account Device, Gameplay Online, Transaction Details, etc.
+- **Google Play Games**: Daily playtime data (package name, duration, sessions)
 - **NEW**: Intelligent failsafe detection for incorrect or corrupted files
-- Warning system when uploaded files lack expected PlayStation data sheets
+- Warning system when uploaded files lack expected platform data
 
 ### Data Review & Control
 - Interactive data tables with filtering capabilities
@@ -63,12 +76,36 @@ When users click "Yes, donate", a JSON file is automatically downloaded containi
 }
 ```
 
+## How to Obtain Your Data
+
+### PlayStation Data
+1. Request your PlayStation data export from Sony
+2. Download the .xlsx file when ready
+3. Use the PlayStation URL: `?platform=playstation`
+
+### Google Play Games Data
+1. Go to [Google Takeout](https://takeout.google.com/)
+2. **Deselect all** products (click "Deselect all")
+3. Scroll down and select **only** "Google Play Games Services"
+4. Click "Next step" at the bottom
+5. Choose:
+   - **File type**: Either `.zip` (recommended) or `.tgz`
+   - **Delivery method**: "Send download link via email" or "Add to Drive"
+6. Click "Create export"
+7. Wait for the email notification (usually within minutes to hours)
+8. Download the ZIP file
+9. Use the Google Play Games URL: `?platform=android`
+
+> **Note**: The Google Play Games data may be in either JSON or HTML format. The parser automatically detects and handles both formats.
+
 ## Application Flow
 
 1. **Consent Page**: Users review and agree to data donation terms
-2. **Upload Page**: Users upload their PlayStation data file (.xlsx)
+2. **Upload Page**: Users upload their data file
+   - **PlayStation**: .xlsx file
+   - **Google Play Games**: .zip file from Google Takeout
    - **File Validation**: Automatic detection of incorrect or corrupted files
-   - **Warning System**: Users are alerted if the file lacks expected PlayStation data
+   - **Warning System**: Users are alerted if the file lacks expected platform data
    - **User Choice**: Option to try again or proceed anyway
 3. **Filter Page**: Users review data tables and can delete specific rows
 4. **Donation Process**: When "Yes, donate" is clicked:
@@ -82,9 +119,13 @@ When users click "Yes, donate", a JSON file is automatically downloaded containi
 
 - **Frontend**: React 19.1.0 with React Router
 - **UI Components**: Material-UI (MUI) with Bootstrap
-- **Data Processing**: ExcelJS for file parsing
+- **Data Processing**:
+  - ExcelJS for PlayStation (.xlsx) parsing
+  - JSZip for Google Takeout (.zip) extraction
+  - DOMParser for HTML format parsing
 - **Data Display**: MUI DataGrid for interactive tables
 - **Build Tool**: Create React App
+- **Architecture**: Factory pattern for dynamic parser/validator loading
 
 ## Available Scripts
 
@@ -120,10 +161,28 @@ The build is optimized and minified for deployment.
 
 ### Key Components
 - `FilterPage.js`: Main data review interface with donation functionality
-- `UploadPage.js`: File upload and processing
-- `playstationParser.js`: Excel file parsing logic
+- `UploadPage.js`: File upload and processing with platform-agnostic design
+- `ConfigContext.js`: Dynamic configuration loading based on URL parameter
+- **Parsers**:
+  - `playstationParser.js`: Excel file parsing logic
+  - `androidParser.js`: Google Takeout ZIP parsing (JSON/HTML auto-detection)
+- **Validators**:
+  - `playstationValidator.js`: PlayStation data validation
+  - `androidValidator.js`: Google Play Games data validation
+- **Factories**:
+  - `parserFactory.js`: Dynamic parser loading
+  - `validatorFactory.js`: Dynamic validator loading
 - `ConsentPage.js`: User consent and terms
 - `ThankYouPage.js`: Donation confirmation
+
+### Adding New Platforms
+To add support for a new platform:
+1. Create a new parser in `src/parsers/[platform]Parser.js`
+2. Create a new validator in `src/validators/[platform]Validator.js`
+3. Register both in `parserFactory.js` and `validatorFactory.js`
+4. Create a configuration file in `public/config-[platform].json`
+5. Add the platform name to the `validPlatforms` array in `ConfigContext.js`
+6. Test with sample data files
 
 ## Data Privacy & Security
 
@@ -134,6 +193,8 @@ The build is optimized and minified for deployment.
 - **Clean Data**: Internal application fields are automatically removed
 
 ### Supported Data Categories
+
+#### PlayStation
 - Account Device information
 - Gameplay Online sessions
 - Friend count data
@@ -141,6 +202,15 @@ The build is optimized and minified for deployment.
 - Transaction details
 - Subscription information
 - PS VR usage data
+
+#### Google Play Games Services
+- Daily playtime data
+  - Date of play
+  - Package name (app identifier)
+  - Duration (formatted as hours/minutes/seconds)
+  - First session start time
+  - Last session end time
+  - Number of sessions
 
 ### File Validation & Failsafe System
 The application includes an intelligent failsafe system that automatically detects potentially incorrect or corrupted PlayStation data files:
@@ -185,9 +255,23 @@ src/
 │   ├── UploadPage.js
 │   ├── FilterPage.js
 │   └── ThankYouPage.js
-├── parsers/            # Data processing utilities
-│   └── playstationParser.js
+├── parsers/            # Platform-specific parsers
+│   ├── playstationParser.js
+│   └── androidParser.js
+├── validators/         # Platform-specific validators
+│   ├── playstationValidator.js
+│   └── androidValidator.js
+├── utils/              # Factory utilities
+│   ├── parserFactory.js
+│   └── validatorFactory.js
+├── ConfigContext.js    # Configuration management
 └── App.js              # Main application component
+
+public/
+├── config-playstation.json  # PlayStation configuration
+├── config-android.json      # Google Play Games configuration
+├── playstation-svgrepo-com.svg
+└── android-logo.svg
 ```
 
 ## Contributing

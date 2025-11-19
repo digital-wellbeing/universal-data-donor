@@ -1,0 +1,134 @@
+{"daily_playtimes": [
+  {
+    "user_date": {
+      "month": 9,
+      "year": 2025,
+      "day": 30
+    },
+    "fragments": [{
+      "num_sessions": 1,
+      "record_date": {
+        "month": 9,
+        "year": 2025,
+        "day": 30
+      },
+      "play_duration": {
+        "seconds": 1221,
+        "nanos": 552000000
+      },
+      "last_session_end_time_millis": 1759264560394,
+      "start_time_millis": 1759263338842,
+      "package_name": "com.templegatesgames.DominionAndroid"
+    }]
+  },
+  {
+    "user_date": {
+      "month": 10,
+      "year": 2025,
+      "day": 2
+    },
+    "fragments": [{
+      "num_sessions": 1,
+      "record_date": {
+        "month": 10,
+        "year": 2025,
+        "day": 2
+      },
+      "play_duration": {
+        "seconds": 1161,
+        "nanos": 734000000
+      },
+      "last_session_end_time_millis": 1759441432783,
+      "start_time_millis": 1759440271049,
+      "package_name": "com.templegatesgames.DominionAndroid"
+    }]
+  },
+  {
+    "user_date": {
+      "month": 10,
+      "year": 2025,
+      "day": 7
+    },
+    "fragments": [{
+      "num_sessions": 0,
+      "record_date": {
+        "month": 10,
+        "year": 2025,
+        "day": 7
+      },
+      "play_duration": {
+        "seconds": 15,
+        "nanos": 896000000
+      },
+      "last_session_end_time_millis": 1759870684950,
+      "start_time_millis": 1759870483090,
+      "package_name": "com.templegatesgames.DominionAndroid"
+    }]
+  },
+  {
+    "user_date": {
+      "month": 10,
+      "year": 2025,
+      "day": 9
+    },
+    "fragments": [{
+      "num_sessions": 1,
+      "record_date": {
+        "month": 10,
+        "year": 2025,
+        "day": 9
+      },
+      "play_duration": {
+        "seconds": 927,
+        "nanos": 733000000
+      },
+      "last_session_end_time_millis": 1760043338603,
+      "start_time_millis": 1760042331946,
+      "package_name": "com.templegatesgames.DominionAndroid"
+    }]
+  },
+  {
+    "user_date": {
+      "month": 10,
+      "year": 2025,
+      "day": 19
+    },
+    "fragments": [{
+      "num_sessions": 1,
+      "record_date": {
+        "month": 10,
+        "year": 2025,
+        "day": 19
+      },
+      "play_duration": {
+        "seconds": 2037,
+        "nanos": 597000000
+      },
+      "last_session_end_time_millis": 1760868731564,
+      "start_time_millis": 1760866693967,
+      "package_name": "com.templegatesgames.DominionAndroid"
+    }]
+  },
+  {
+    "user_date": {
+      "month": 10,
+      "year": 2025,
+      "day": 22
+    },
+    "fragments": [{
+      "num_sessions": 1,
+      "record_date": {
+        "month": 10,
+        "year": 2025,
+        "day": 22
+      },
+      "play_duration": {
+        "seconds": 1192,
+        "nanos": 260000000
+      },
+      "last_session_end_time_millis": 1761161645390,
+      "start_time_millis": 1761160447200,
+      "package_name": "com.templegatesgames.DominionAndroid"
+    }]
+  }
+]}
