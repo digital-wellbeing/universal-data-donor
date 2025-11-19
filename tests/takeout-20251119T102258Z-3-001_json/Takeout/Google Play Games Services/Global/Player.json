@@ -1,0 +1,90 @@
+{"player": {
+  "total_unlocked_achievements": 1,
+  "category_data": [
+    {
+      "experience_points": 0,
+      "category": "ARCADE"
+    },
+    {
+      "experience_points": 0,
+      "category": "PUZZLE"
+    },
+    {
+      "experience_points": 500,
+      "category": "CARDS"
+    },
+    {
+      "experience_points": 0,
+      "category": "CASUAL"
+    },
+    {
+      "experience_points": 0,
+      "category": "RACING"
+    },
+    {
+      "experience_points": 0,
+      "category": "SPORTS"
+    },
+    {
+      "experience_points": 0,
+      "category": "ACTION"
+    },
+    {
+      "experience_points": 0,
+      "category": "ADVENTURE"
+    },
+    {
+      "experience_points": 0,
+      "category": "BOARD"
+    },
+    {
+      "experience_points": 0,
+      "category": "CASINO"
+    },
+    {
+      "experience_points": 0,
+      "category": "EDUCATIONAL"
+    },
+    {
+      "experience_points": 0,
+      "category": "FAMILY"
+    },
+    {
+      "experience_points": 0,
+      "category": "MUSIC"
+    },
+    {
+      "experience_points": 0,
+      "category": "ROLE_PLAYING"
+    },
+    {
+      "experience_points": 0,
+      "category": "SIMULATION"
+    },
+    {
+      "experience_points": 0,
+      "category": "STRATEGY"
+    },
+    {
+      "experience_points": 0,
+      "category": "TRIVIA"
+    },
+    {
+      "experience_points": 0,
+      "category": "WORD"
+    }
+  ],
+  "last_played_application_stats": {
+    "last_played_time_millis": 1503474339618,
+    "translated_name": "Ghost Blitz",
+    "region_code": "HU"
+  },
+  "gamer_tag_is_explicitly_set": true,
+  "experience_points": 500,
+  "gamer_tag": "sinandrei",
+  "top_category": "CARDS",
+  "gamer_tag_is_default": false,
+  "profile_discoverable_via_google_account": true,
+  "experience_level": 1,
+  "player_profile_visibility": "PUBLIC"
+}}

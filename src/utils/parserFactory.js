@@ -1,5 +1,6 @@
 const parserImporters = {
   playstationParser: () => import('../parsers/playstationParser.js'),
+  androidParser: () => import('../parsers/androidParser.js'),
 };
 
 export const getParser = async (parserName) => {
