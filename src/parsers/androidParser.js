@@ -158,6 +158,9 @@ const parseHtmlFormat = (htmlContent) => {
 const findFileInZip = (zip, targetPath) => {
   const targetPathLower = targetPath.toLowerCase();
 
+  // Extract the expected extension from targetPath
+  const targetExtension = targetPath.toLowerCase().split('.').pop();
+
   // Try exact match first
   if (zip.file(targetPath)) {
     return zip.file(targetPath);
@@ -172,8 +175,11 @@ const findFileInZip = (zip, targetPath) => {
   }
 
   // Try to find by partial path (handle different folder nesting)
+  // IMPORTANT: Also check the file extension to avoid returning wrong format
   for (const fileName of files) {
-    if (fileName.toLowerCase().includes('google play games services/global/playtime')) {
+    const fileNameLower = fileName.toLowerCase();
+    if (fileNameLower.includes('google play games services/global/playtime') &&
+        fileNameLower.endsWith(`.${targetExtension}`)) {
       return zip.file(fileName);
     }
   }
