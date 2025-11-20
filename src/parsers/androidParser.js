@@ -62,6 +62,150 @@ const formatDate = (dateObj) => {
 };
 
 /**
+ * Format ISO 8601 timestamp to readable string
+ * @param {string} isoString - ISO 8601 timestamp (e.g., "2015-07-06T07:13:22Z")
+ * @returns {string} Formatted timestamp
+ */
+const formatISOTimestamp = (isoString) => {
+  if (!isoString) return '';
+
+  try {
+    const date = new Date(isoString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return '';
+
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZoneName: 'short'
+    });
+  } catch (error) {
+    return '';
+  }
+};
+
+/**
+ * Parse Activity.json for a single game
+ * @param {string} jsonContent - JSON file content
+ * @returns {Object} Activity data { timeFirstPlayed, timeLastPlayed }
+ */
+const parseActivityJson = (jsonContent) => {
+  try {
+    const data = JSON.parse(jsonContent);
+    return {
+      timeFirstPlayed: data.time_first_played ? formatISOTimestamp(data.time_first_played) : '',
+      timeLastPlayed: data.time_last_played ? formatISOTimestamp(data.time_last_played) : ''
+    };
+  } catch (error) {
+    return { timeFirstPlayed: '', timeLastPlayed: '' };
+  }
+};
+
+/**
+ * Parse Activity.html for a single game
+ * @param {string} htmlContent - HTML file content
+ * @returns {Object} Activity data { timeFirstPlayed, timeLastPlayed }
+ */
+const parseActivityHtml = (htmlContent) => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const table = doc.querySelector('table.mdl-data-table');
+
+  let timeFirstPlayed = '';
+  let timeLastPlayed = '';
+
+  if (table) {
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length >= 2) {
+        const field = cells[0].textContent.trim();
+        const value = cells[1].textContent.trim();
+
+        if (field === 'Time First Played') {
+          timeFirstPlayed = formatISOTimestamp(value);
+        } else if (field === 'Time Last Played') {
+          timeLastPlayed = formatISOTimestamp(value);
+        }
+      }
+    });
+  }
+
+  return { timeFirstPlayed, timeLastPlayed };
+};
+
+/**
+ * Crawl all games in Games folder and extract activity data
+ * @param {JSZip} zip - JSZip instance
+ * @returns {Promise<Array>} Array of game activity records
+ */
+const parseGameActivities = async (zip) => {
+  const gameActivities = [];
+  const files = Object.keys(zip.files);
+
+  // Find all game folders - look for Activity.html or Activity.json files
+  // Pattern: Takeout/Google Play Games Services/Games/{GameTitle}/Activity.{html|json}
+  const gamesPattern = /Takeout\/Google Play Games Services\/Games\/([^\/]+)\/(Activity\.(html|json))$/i;
+
+  // Group files by game to prefer JSON over HTML
+  const gameFilesMap = new Map();
+
+  files.forEach(filePath => {
+    const match = filePath.match(gamesPattern);
+    if (match) {
+      const gameTitle = match[1];
+      const fileName = match[2];
+      const fileExtension = match[3];
+
+      if (!gameFilesMap.has(gameTitle)) {
+        gameFilesMap.set(gameTitle, { path: filePath, extension: fileExtension });
+      } else {
+        // Prefer JSON over HTML
+        const existing = gameFilesMap.get(gameTitle);
+        if (fileExtension === 'json' && existing.extension === 'html') {
+          gameFilesMap.set(gameTitle, { path: filePath, extension: fileExtension });
+        }
+      }
+    }
+  });
+
+  // Parse each game's activity data
+  for (const [gameTitle, fileInfo] of gameFilesMap) {
+    try {
+      const file = zip.file(fileInfo.path);
+      if (!file) continue;
+
+      const content = await file.async('string');
+
+      let activityData;
+      if (fileInfo.extension === 'html') {
+        activityData = parseActivityHtml(content);
+      } else {
+        activityData = parseActivityJson(content);
+      }
+
+      // Only add if we got valid data
+      if (activityData.timeFirstPlayed || activityData.timeLastPlayed) {
+        gameActivities.push({
+          'Game Title': gameTitle,
+          'Time First Played': activityData.timeFirstPlayed,
+          'Time Last Played': activityData.timeLastPlayed
+        });
+      }
+    } catch (error) {
+      // Log warning but continue processing other games
+      console.warn(`Failed to parse activity for game ${gameTitle}:`, error);
+    }
+  }
+
+  return gameActivities;
+};
+
+/**
  * Parse JSON format playtime file
  * @param {string} jsonContent - JSON file content
  * @returns {Array} Array of playtime records
@@ -203,53 +347,80 @@ export default async function parseAndroidFile(file) {
     // Load ZIP file
     const zip = await JSZip.loadAsync(file);
 
-    // Try to find Playtime file (JSON first, then HTML)
-    let playtimeFile = findFileInZip(zip, PLAYTIME_PATH_JSON);
-    let isJsonFormat = true;
+    // Parse Daily Playtime (independent section)
+    try {
+      // Try to find Playtime file (JSON first, then HTML)
+      let playtimeFile = findFileInZip(zip, PLAYTIME_PATH_JSON);
+      let isJsonFormat = true;
 
-    if (!playtimeFile) {
-      playtimeFile = findFileInZip(zip, PLAYTIME_PATH_HTML);
-      isJsonFormat = false;
-    }
+      if (!playtimeFile) {
+        playtimeFile = findFileInZip(zip, PLAYTIME_PATH_HTML);
+        isJsonFormat = false;
+      }
 
-    if (!playtimeFile) {
-      parsingErrors.sheetsNotFound.push('Playtime.json', 'Playtime.html');
+      if (!playtimeFile) {
+        parsingErrors.sheetsNotFound.push('Playtime.json', 'Playtime.html');
+        parsingErrors.tablesNotParsed.push({
+          sheetName: 'Google Play Games Services/Global',
+          reason: 'Could not find Playtime.json or Playtime.html in the expected location',
+          expectedPath: 'Takeout/Google Play Games Services/Global/'
+        });
+      } else {
+        // Extract file content
+        const content = await playtimeFile.async('string');
+
+        // Parse based on format
+        let rows = [];
+        try {
+          if (isJsonFormat) {
+            rows = parseJsonFormat(content);
+          } else {
+            rows = parseHtmlFormat(content);
+          }
+        } catch (parseError) {
+          parsingErrors.tablesNotParsed.push({
+            sheetName: 'Daily Playtime',
+            reason: `Failed to parse ${isJsonFormat ? 'JSON' : 'HTML'} content: ${parseError.message}`,
+            expectedFormat: isJsonFormat ? 'JSON' : 'HTML'
+          });
+        }
+
+        // Store parsed data
+        if (rows.length > 0) {
+          data['Daily Playtime'] = rows;
+        } else {
+          parsingErrors.tablesNotParsed.push({
+            sheetName: 'Daily Playtime',
+            reason: 'No playtime data found in the file',
+            expectedFormat: isJsonFormat ? 'JSON' : 'HTML'
+          });
+        }
+      }
+    } catch (playtimeError) {
       parsingErrors.tablesNotParsed.push({
-        sheetName: 'Google Play Games Services/Global',
-        reason: 'Could not find Playtime.json or Playtime.html in the expected location',
+        sheetName: 'Daily Playtime',
+        reason: `Failed to parse playtime data: ${playtimeError.message}`,
         expectedPath: 'Takeout/Google Play Games Services/Global/'
       });
-      return { data, parsingErrors };
     }
 
-    // Extract file content
-    const content = await playtimeFile.async('string');
-
-    // Parse based on format
-    let rows = [];
+    // Parse game activities from Games folder (independent section)
     try {
-      if (isJsonFormat) {
-        rows = parseJsonFormat(content);
+      const gameActivities = await parseGameActivities(zip);
+      if (gameActivities.length > 0) {
+        data['Game Activity'] = gameActivities;
       } else {
-        rows = parseHtmlFormat(content);
+        parsingErrors.tablesNotParsed.push({
+          sheetName: 'Game Activity',
+          reason: 'No game activity files found in Games folder',
+          expectedPath: 'Takeout/Google Play Games Services/Games/*/Activity.html or Activity.json'
+        });
       }
-    } catch (parseError) {
+    } catch (gameError) {
       parsingErrors.tablesNotParsed.push({
-        sheetName: 'Daily Playtime',
-        reason: `Failed to parse ${isJsonFormat ? 'JSON' : 'HTML'} content: ${parseError.message}`,
-        expectedFormat: isJsonFormat ? 'JSON' : 'HTML'
-      });
-      return { data, parsingErrors };
-    }
-
-    // Store parsed data
-    if (rows.length > 0) {
-      data['Daily Playtime'] = rows;
-    } else {
-      parsingErrors.tablesNotParsed.push({
-        sheetName: 'Daily Playtime',
-        reason: 'No playtime data found in the file',
-        expectedFormat: isJsonFormat ? 'JSON' : 'HTML'
+        sheetName: 'Game Activity',
+        reason: `Failed to parse game activities: ${gameError.message}`,
+        expectedPath: 'Takeout/Google Play Games Services/Games/'
       });
     }
 

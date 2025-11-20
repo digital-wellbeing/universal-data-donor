@@ -28,6 +28,6 @@ export default function validateAndroidData(parseResult) {
   // No tables with data found
   return {
     valid: false,
-    reason: 'No playtime data found in the file'
+    reason: 'No playtime or game activity data found in the file'
   };
 }
