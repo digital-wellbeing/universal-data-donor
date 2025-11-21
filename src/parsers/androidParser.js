@@ -149,7 +149,7 @@ const parseGameActivities = async (zip) => {
 
   // Find all game folders - look for Activity.html or Activity.json files
   // Pattern: Takeout/Google Play Games Services/Games/{GameTitle}/Activity.{html|json}
-  const gamesPattern = /Takeout\/Google Play Games Services\/Games\/([^\/]+)\/(Activity\.(html|json))$/i;
+  const gamesPattern = /Takeout\/Google Play Games Services\/Games\/([^/]+)\/(Activity\.(html|json))$/i;
 
   // Group files by game to prefer JSON over HTML
   const gameFilesMap = new Map();
@@ -158,7 +158,6 @@ const parseGameActivities = async (zip) => {
     const match = filePath.match(gamesPattern);
     if (match) {
       const gameTitle = match[1];
-      const fileName = match[2];
       const fileExtension = match[3];
 
       if (!gameFilesMap.has(gameTitle)) {
