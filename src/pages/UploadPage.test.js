@@ -5,7 +5,18 @@ import UploadPage from './UploadPage';
 import { getParser } from '../utils/parserFactory';
 import { getValidator } from '../utils/validatorFactory';
 import { ConfigContext } from '../ConfigContext';
-import config from '../../public/config.json';
+
+// Mock config for testing
+const config = {
+  platform: 'PlayStation',
+  parser: 'playstation',
+  validator: 'playstation',
+  logo: '/logo.png',
+  title: 'Data Donation',
+  consent: {
+    text: 'Test consent text'
+  }
+};
 
 // Mock the parser factory to return a mocked parser function
 jest.mock('../utils/parserFactory');

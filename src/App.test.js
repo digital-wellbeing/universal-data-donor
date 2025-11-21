@@ -2,7 +2,18 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { ConfigContext } from './ConfigContext';
-import config from '../public/config.json';
+
+// Mock config for testing
+const config = {
+  platform: 'PlayStation',
+  parser: 'playstation',
+  validator: 'playstation',
+  logo: '/logo.png',
+  title: 'Data Donation',
+  consent: {
+    text: 'Test consent text'
+  }
+};
 
 test('renders consent page on initial load', () => {
   render(
