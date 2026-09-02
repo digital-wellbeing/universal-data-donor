@@ -1,0 +1,14 @@
+services:
+  datadonation-api:
+    build: .
+    image: datadonation-api:latest
+    container_name: datadonation-api
+    restart: unless-stopped
+    # Bind to localhost only — Caddy reverse-proxies /datadonation/submit to it.
+    ports:
+      - "127.0.0.1:8083:8083"
+    # SQLite donations DB persists here on the host.
+    volumes:
+      - /srv/datadonation-data:/data
+    env_file:
+      - datadonation-api.env

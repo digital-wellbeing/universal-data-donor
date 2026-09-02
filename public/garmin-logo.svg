@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Smartwatch icon">
+  <rect x="22" y="3" width="20" height="9" rx="2.5" fill="#006BB6"/>
+  <rect x="22" y="52" width="20" height="9" rx="2.5" fill="#006BB6"/>
+  <rect x="13" y="10" width="38" height="44" rx="11" fill="#006BB6"/>
+  <rect x="18.5" y="15.5" width="27" height="33" rx="7" fill="#ffffff"/>
+  <polyline points="21,32 27.5,32 30.5,24.5 34,39.5 37,32 43,32"
+    fill="none" stroke="#006BB6" stroke-width="2.6"
+    stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
