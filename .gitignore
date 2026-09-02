@@ -24,3 +24,8 @@ yarn-debug.log*
 yarn-error.log*
 *.md
 !README.md
+
+# Python ingest API
+__pycache__/
+*.py[cod]
+server/datadonation-api.env

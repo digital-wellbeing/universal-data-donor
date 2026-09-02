@@ -17,8 +17,34 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       logo: '/android-logo.svg',
       description: 'Donate your Google Play Games data',
       color: '#3DDC84'
+    },
+    {
+      id: 'activitywatch',
+      name: 'ActivityWatch',
+      logo: '/activitywatch-logo.svg',
+      description: 'Donate your ActivityWatch usage data',
+      color: '#5C5CD6'
+    },
+    {
+      id: 'googlefit',
+      name: 'Google Fit',
+      logo: '/googlefit-logo.svg',
+      description: 'Donate your Google Fit activity data',
+      color: '#1A73E8'
+    },
+    {
+      id: 'garmin',
+      name: 'Garmin',
+      logo: '/garmin-logo.svg',
+      description: 'Donate your Garmin wearable health data',
+      color: '#006BB6'
     }
   ];
+
+  // Only these platforms are shown on the homepage. The others remain fully
+  // functional via a direct ?platform=<id> URL — add an id here to re-enable it.
+  const ENABLED_PLATFORM_IDS = ['activitywatch', 'googlefit', 'garmin'];
+  const visiblePlatforms = platforms.filter((p) => ENABLED_PLATFORM_IDS.includes(p.id));
 
   const handlePlatformClick = (platformId) => {
     // Update URL with platform parameter
@@ -43,7 +69,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
         </Box>
 
         <Grid container spacing={4} justifyContent="center">
-          {platforms.map((platform) => (
+          {visiblePlatforms.map((platform) => (
             <Grid item xs={12} sm={6} md={5} key={platform.id}>
               <Card
                 className="platform-card"
@@ -126,7 +152,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
           <Typography variant="body2" color="text.secondary">
             <strong>Tip:</strong> You can also access a specific platform directly using URL parameters:
             <br />
-            <code>?platform=playstation</code> or <code>?platform=android</code>
+            <code>?platform=activitywatch</code>, <code>?platform=googlefit</code> or <code>?platform=garmin</code>
           </Typography>
         </Box>
       </Container>

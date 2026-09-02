@@ -10,7 +10,7 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <ConfigProvider>
-      <BrowserRouter basename="/universal-data-donor">
+      <BrowserRouter basename="/datadonation">
         <App />
       </BrowserRouter>
     </ConfigProvider>

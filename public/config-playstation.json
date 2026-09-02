@@ -2,9 +2,11 @@
   "general": {
     "displaySubmissionId": true,
     "platform": "PlayStation",
+    "platformId": "playstation",
     "parser": "playstationParser",
     "validator": "playstationValidator",
-    "fileExtensions": [".xlsx"]
+    "fileExtensions": [".xlsx"],
+    "turnstileSitekey": "0x4AAAAAAEQ8u5xZ1gdrl61G"
   },
   "header": {
     "title": "Universal Digital Donor",
