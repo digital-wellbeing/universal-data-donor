@@ -2,9 +2,11 @@
   "general": {
     "displaySubmissionId": true,
     "platform": "Google Play Games",
+    "platformId": "android",
     "parser": "androidParser",
     "validator": "androidValidator",
-    "fileExtensions": [".zip"]
+    "fileExtensions": [".zip"],
+    "turnstileSitekey": "0x4AAAAAAEQ8u5xZ1gdrl61G"
   },
   "header": {
     "title": "Universal Digital Donor",

@@ -1,6 +1,9 @@
 const parserImporters = {
   playstationParser: () => import('../parsers/playstationParser.js'),
   androidParser: () => import('../parsers/androidParser.js'),
+  activitywatchParser: () => import('../parsers/activitywatchParser.js'),
+  googlefitParser: () => import('../parsers/googlefitParser.js'),
+  garminParser: () => import('../parsers/garminParser.js'),
 };
 
 export const getParser = async (parserName) => {
