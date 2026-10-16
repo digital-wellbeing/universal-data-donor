@@ -21,6 +21,16 @@ Config via environment (all optional; safe test defaults for local dev):
   MAX_BYTES         Max request body size (default 25 MiB).
   RATE_MAX          Max accepted submissions per IP per window (default 5).
   RATE_WINDOW       Rate-limit window in seconds (default 3600).
+  XFF_TRUSTED_HOPS  How many entries, counted from the RIGHT of X-Forwarded-For,
+                    were appended by proxies we trust (Caddy and anything in
+                    front of it that Caddy trusts). The client IP is the entry
+                    just left of those. Default 0 = take the rightmost entry
+                    (the address Caddy itself saw), which a client can never
+                    spoof. Raise to 1 once Caddy `trusted_proxies` is set to the
+                    upstream gateway so real client IPs reach this app.
+
+The Turnstile token must arrive in the `CF-Turnstile-Response` header so it can
+be verified BEFORE the (up to MAX_BYTES) JSON body is read and parsed.
 """
 
 import os
@@ -51,6 +61,7 @@ IP_SALT = os.environ.get("IP_SALT", "dev-insecure-salt-change-me")
 MAX_BYTES = int(os.environ.get("MAX_BYTES", 25 * 1024 * 1024))
 RATE_MAX = int(os.environ.get("RATE_MAX", "5"))
 RATE_WINDOW = int(os.environ.get("RATE_WINDOW", "3600"))
+XFF_TRUSTED_HOPS = max(0, int(os.environ.get("XFF_TRUSTED_HOPS", "0")))
 ALLOWED_PLATFORMS = {"playstation", "android", "activitywatch", "googlefit", "garmin"}
 
 app = Flask(__name__)
@@ -94,12 +105,27 @@ def init_db():
         c.execute("CREATE INDEX IF NOT EXISTS idx_rate_events ON rate_events (ip_hash, ts)")
 
 
+def _strip_port(addr):
+    """Drop a trailing :port (Azure gateways append "ip:port"); keep bare IPv6."""
+    addr = addr.strip()
+    if addr.startswith("[") and "]" in addr:
+        return addr[1:addr.index("]")]
+    if addr.count(":") == 1:
+        return addr.split(":")[0]
+    return addr
+
+
 def client_ip():
-    # Behind Caddy's reverse_proxy, the real client IP is the first hop of
-    # X-Forwarded-For (Caddy appends it). Fall back to the socket peer.
-    xff = request.headers.get("X-Forwarded-For", "")
-    if xff:
-        return xff.split(",")[0].strip()
+    """Client IP from X-Forwarded-For, trusting only the proxies we control.
+
+    Entries are appended left-to-right by each hop, so only the right-hand
+    XFF_TRUSTED_HOPS + 1 entries are trustworthy; anything further left is
+    client-supplied and ignored. Falls back to the socket peer.
+    """
+    parts = [p for p in request.headers.get("X-Forwarded-For", "").split(",") if p.strip()]
+    if parts:
+        idx = len(parts) - 1 - XFF_TRUSTED_HOPS
+        return _strip_port(parts[max(idx, 0)])
     return request.remote_addr or "unknown"
 
 
@@ -159,15 +185,15 @@ def submit():
     ip = client_ip()
     ip_hash_value = hash_ip(ip)
 
+    # 1) Human check — server-verified Turnstile token, taken from a header so
+    #    unauthenticated callers are rejected before we read or parse the body.
+    token = request.headers.get("CF-Turnstile-Response")
+    if not verify_turnstile(token, ip):
+        return jsonify(ok=False, error="captcha_failed"), 403
+
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
         return jsonify(ok=False, error="invalid_json"), 400
-
-    # 1) Human check — server-verified Turnstile token. A bot POSTing directly
-    #    without a valid token is rejected here.
-    token = body.get("turnstileToken") or request.headers.get("CF-Turnstile-Response")
-    if not verify_turnstile(token, ip):
-        return jsonify(ok=False, error="captcha_failed"), 403
 
     # 2) Rate limit per IP (prevents flooding).
     if not rate_ok(ip_hash_value):

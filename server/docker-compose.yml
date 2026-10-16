@@ -10,5 +10,11 @@ services:
     # SQLite donations DB persists here on the host.
     volumes:
       - /srv/datadonation-data:/data
+    # Least privilege: read-only root fs, no extra capabilities, no setuid.
+    read_only: true
+    tmpfs:
+      - /tmp   # gunicorn worker heartbeat files
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     env_file:
       - datadonation-api.env
