@@ -182,7 +182,16 @@ const FilterPage = ({ parsedData }) => {
       : '') || '';
   const submitUrl = `${process.env.PUBLIC_URL}/submit`;
 
+  // Largest donation the server accepts (mirrors the server's MAX_BYTES, default 25 MiB).
+  // Override per platform with `general.maxDonationBytes` in config-<id>.json.
+  const maxDonationBytes = Number(config?.general?.maxDonationBytes) || 25 * 1024 * 1024;
+  const formatMb = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const tooLargeMessage = (bytes) =>
+    `Your donation is ${formatMb(bytes)}, which is over the ${formatMb(maxDonationBytes)} limit. ` +
+    'Narrow the date range, exclude apps, or delete rows to make it smaller, then try again.';
+
   const submitErrorMessage = (code, status) => {
+    if (status === 413) return tooLargeMessage(maxDonationBytes + 1);
     switch (code) {
       case 'captcha_failed':
         return 'The “I’m human” check failed. Please try again.';
@@ -268,17 +277,23 @@ const FilterPage = ({ parsedData }) => {
         setSubmitError('Please complete the “I’m human” check below before donating.');
         return;
       }
+      const body = JSON.stringify({
+        platform: platformId,
+        turnstileToken: captchaToken,
+        donation: donationPackage,
+      });
+      const bodyBytes = new Blob([body]).size;
+      if (bodyBytes > maxDonationBytes) {
+        setSubmitError(tooLargeMessage(bodyBytes));
+        return;
+      }
       setSubmitting(true);
       setSubmitError(null);
       try {
         const res = await fetch(submitUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            platform: platformId,
-            turnstileToken: captchaToken,
-            donation: donationPackage,
-          }),
+          body,
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json.ok) {
