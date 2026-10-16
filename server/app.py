@@ -21,6 +21,10 @@ Config via environment (all optional; safe test defaults for local dev):
   MAX_BYTES         Max request body size (default 25 MiB).
   RATE_MAX          Max accepted submissions per IP per window (default 5).
   RATE_WINDOW       Rate-limit window in seconds (default 3600).
+  DONATION_PUBLIC_KEY  Base64 X25519 public key. When set, every donation payload
+                    is stored sealed-box encrypted ("enc:v1:..."); only the offline
+                    private key can read it (see donation_crypto.py). Unset = plaintext.
+  REQUIRE_ENCRYPTION   Set to 1 to refuse to start without DONATION_PUBLIC_KEY.
   XFF_TRUSTED_HOPS  How many entries, counted from the RIGHT of X-Forwarded-For,
                     were appended by proxies we trust (Caddy and anything in
                     front of it that Caddy trusts). The client IP is the entry
@@ -46,6 +50,8 @@ import urllib.request
 
 from flask import Flask, request, jsonify
 
+from donation_crypto import encrypt_payload
+
 DONATION_DB = os.environ.get("DONATION_DB", os.path.join(os.path.dirname(__file__), "donations.sqlite"))
 # Cloudflare's documented "always passes" test secret. Override in production.
 TURNSTILE_SECRET = os.environ.get("TURNSTILE_SECRET", "1x0000000000000000000000000000000AA")
@@ -61,8 +67,13 @@ IP_SALT = os.environ.get("IP_SALT", "dev-insecure-salt-change-me")
 MAX_BYTES = int(os.environ.get("MAX_BYTES", 25 * 1024 * 1024))
 RATE_MAX = int(os.environ.get("RATE_MAX", "5"))
 RATE_WINDOW = int(os.environ.get("RATE_WINDOW", "3600"))
+DONATION_PUBLIC_KEY = os.environ.get("DONATION_PUBLIC_KEY", "").strip()
+REQUIRE_ENCRYPTION = os.environ.get("REQUIRE_ENCRYPTION", "") == "1"
 XFF_TRUSTED_HOPS = max(0, int(os.environ.get("XFF_TRUSTED_HOPS", "0")))
 ALLOWED_PLATFORMS = {"playstation", "android", "activitywatch", "googlefit", "garmin"}
+
+if REQUIRE_ENCRYPTION and not DONATION_PUBLIC_KEY:
+    raise SystemExit("REQUIRE_ENCRYPTION=1 but DONATION_PUBLIC_KEY is not set")
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_BYTES
@@ -211,6 +222,9 @@ def submit():
     meta = donation.get("metadata") if isinstance(donation.get("metadata"), dict) else {}
     received_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+    payload_json = json.dumps(donation, ensure_ascii=False)
+    stored_payload = encrypt_payload(payload_json, DONATION_PUBLIC_KEY) if DONATION_PUBLIC_KEY else payload_json
+
     with _write_lock, _connect() as c:
         cur = c.execute(
             """
@@ -227,7 +241,7 @@ def submit():
                 (request.headers.get("User-Agent") or "")[:300],
                 meta.get("totalTables"),
                 meta.get("totalRemainingRows"),
-                json.dumps(donation, ensure_ascii=False),
+                stored_payload,
             ),
         )
         row_id = cur.lastrowid

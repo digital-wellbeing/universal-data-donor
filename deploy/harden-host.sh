@@ -22,6 +22,7 @@ BACKUP_DIR=/srv/datadonation-backups
 CADDYFILE=/etc/caddy/Caddyfile
 STAMP="$(date +%Y%m%d-%H%M%S)"
 ENV_FILE="$API_DIR/datadonation-api.env"
+CSP="default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
 echo "=== [1/5] Backing up donations DB ==="
 install -d -m 0700 -o root -g root "$BACKUP_DIR"
@@ -50,7 +51,19 @@ bash "/home/$OWNER/deploy-datadonation.sh"
 
 echo "=== [4/5] Security headers in Caddy ==="
 if grep -q '(ddsec)' "$CADDYFILE"; then
-  echo "    already present"
+  cp -a "$CADDYFILE" "${CADDYFILE}.bak.${STAMP}"
+  tmp="$(mktemp)"
+  python3 - "$CADDYFILE" "$tmp" "$CSP" <<'PY'
+import re, sys
+src = open(sys.argv[1]).read()
+out, n = re.subn(r'(Content-Security-Policy ")[^"]*(")', lambda m: m.group(1) + sys.argv[3] + m.group(2), src, count=1)
+assert n == 1
+open(sys.argv[2], "w").write(out)
+PY
+  caddy validate --adapter caddyfile --config "$tmp"
+  install -m 0644 "$tmp" "$CADDYFILE"; rm -f "$tmp"
+  systemctl reload caddy
+  echo "    CSP refreshed (backup: ${CADDYFILE}.bak.${STAMP})"
 else
   cp -a "$CADDYFILE" "${CADDYFILE}.bak.${STAMP}"
   tmp="$(mktemp)"
@@ -64,7 +77,7 @@ snippet = """(ddsec) {
 		X-Frame-Options DENY
 		Referrer-Policy no-referrer
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
-		Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://stackpath.bootstrapcdn.com https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		-Server
 	}
 }
@@ -103,3 +116,24 @@ for (ip, xff), n in c.most_common(6): print("  remote_ip=%s  X-Forwarded-For=%s 
 ' || true
 echo ""
 echo "Done. Paste the output above to Claude so XFF_TRUSTED_HOPS / Caddy trusted_proxies can be set."
+
+for flag in "$@"; do
+  case "$flag" in
+    --encrypt-existing)
+      echo "--- Encrypting existing plaintext donations (backup taken in step 1) ---"
+      docker exec datadonation-api python donation_crypto.py encrypt-existing ;;
+    --export-latest)
+      echo "--- Exporting latest donation (still encrypted) to /home/$OWNER/latest-donation.json ---"
+      docker exec datadonation-api python -c "
+import sqlite3, json
+c = sqlite3.connect('file:/data/donations.sqlite?mode=ro', uri=True)
+r = c.execute('select id, platform, received_at, total_tables, total_rows, payload from donations order by id desc limit 1').fetchone()
+print(json.dumps(dict(id=r[0], platform=r[1], received_at=r[2], total_tables=r[3], total_rows=r[4], payload=r[5])))
+" > "/home/$OWNER/latest-donation.json"
+      chown "$OWNER:$OWNER" "/home/$OWNER/latest-donation.json"; chmod 0600 "/home/$OWNER/latest-donation.json"
+      python3 -c "import json;d=json.load(open('/home/$OWNER/latest-donation.json'));print('  id=%s platform=%s total_rows=%s payload_prefix=%s' % (d['id'],d['platform'],d['total_rows'],d['payload'][:7]))" ;;
+    --revoke)
+      rm -f /etc/sudoers.d/90-datadonation-deploy
+      echo "Revoked: /etc/sudoers.d/90-datadonation-deploy removed." ;;
+  esac
+done
