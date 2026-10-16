@@ -5,6 +5,7 @@ import { Box, TextField, Autocomplete, Button, Stack, Typography, Chip } from '@
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useConfig } from '../ConfigContext';
 import TurnstileWidget from '../components/TurnstileWidget';
+import { startFilterTour, hasSeenFilterTour } from '../components/filterTour';
 
 // Keys that are internal bookkeeping and must never be shown as columns or
 // included in the donated data. `id`/`selected` are added by UploadPage; any
@@ -329,6 +330,23 @@ const FilterPage = ({ parsedData }) => {
     }));
   };
 
+  // First-visit spotlight tour: wait for the first table to render, then start once.
+  const dataReady = Object.keys(data).length > 0;
+  useEffect(() => {
+    if (!dataReady || hasSeenFilterTour()) return undefined;
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      if (document.querySelector('[data-tour="table-title"]')) {
+        clearInterval(timer);
+        startFilterTour();
+      } else if (tries > 20) {
+        clearInterval(timer);
+      }
+    }, 250);
+    return () => clearInterval(timer);
+  }, [dataReady]);
+
   // Add more robust config checking
   if (!config || !config.page || !config.page.filter) {
     return <div>Loading...</div>;
@@ -358,9 +376,14 @@ const FilterPage = ({ parsedData }) => {
         </div>
         <div className="card-body">
           <p>{config.page.filter.intro}</p>
+          <p>
+            <button type="button" className="btn btn-link p-0" onClick={() => startFilterTour({ force: true })}>
+              Take a quick tour of this page
+            </button>
+          </p>
 
           {filtersAvailable && (
-            <Box sx={{ mb: 4, p: 2, border: '1px solid #dee2e6', borderRadius: 2, backgroundColor: '#f8f9fa' }}>
+            <Box data-tour="filters" sx={{ mb: 4, p: 2, border: '1px solid #dee2e6', borderRadius: 2, backgroundColor: '#f8f9fa' }}>
               <Typography variant="h6" sx={{ mb: 2 }}>Filter data before donating</Typography>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} flexWrap="wrap" useFlexGap>
                 {hasTimestamps && (
@@ -391,6 +414,7 @@ const FilterPage = ({ parsedData }) => {
                 )}
                 {appOptions.length > 0 && (
                   <Autocomplete
+                    data-tour="exclude"
                     multiple
                     size="small"
                     options={appOptions}
@@ -430,11 +454,12 @@ const FilterPage = ({ parsedData }) => {
             const dataKeys = Object.keys(rows[0]).filter(key => !isInternalKey(key));
             const columns = createResponsiveColumns(dataKeys);
 
+            const isFirstTable = sheetName === Object.keys(filteredData).find((n) => filteredData[n] && filteredData[n].length > 0);
             const dynamicPageSize = getDynamicPageSize(rows.length);
 
             return (
               <Box key={sheetName} sx={{ width: '100%', mb: 4 }}>
-                <h3 style={{
+                <h3 data-tour={isFirstTable ? 'table-title' : undefined} style={{
                   paddingTop: '4px',
                   paddingBottom: '4px',
                   borderTopWidth: '2px',
@@ -442,7 +467,7 @@ const FilterPage = ({ parsedData }) => {
                   marginTop: '8px',
                   marginBottom: '16px'
                 }}>{sheetName.replace(/"/g, '')} <span style={{ fontSize: '0.7em', color: '#6c757d', fontWeight: 'normal' }}>({rows.length.toLocaleString()} rows)</span></h3>
-                <Box sx={{
+                <Box data-tour={isFirstTable ? 'grid' : undefined} sx={{
                   display: 'flex',
                   flexDirection: 'column',
                   minHeight: '200px',
@@ -492,6 +517,7 @@ const FilterPage = ({ parsedData }) => {
               </Box>
             );
           })}
+          <div data-tour="decision">
           <p className="mt-4 mb-3"><strong>{config.page.filter.donationPrompt}</strong></p>
           {turnstileSitekey && (
             <div className="mb-3">
@@ -512,6 +538,7 @@ const FilterPage = ({ parsedData }) => {
             <button className="btn btn-secondary" onClick={handleDecline} disabled={submitting}>
               {config.page.filter.declineButton}
             </button>
+          </div>
           </div>
           <p className="mt-3 text-muted">
             <strong>{config.page.filter.note.split(':')[0]}:</strong> {config.page.filter.note.split(':')[1]}
