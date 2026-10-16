@@ -279,11 +279,7 @@ const FilterPage = ({ parsedData }) => {
         setSubmitError('Please complete the “I’m human” check below before donating.');
         return;
       }
-      const body = JSON.stringify({
-        platform: platformId,
-        turnstileToken: captchaToken,
-        donation: donationPackage,
-      });
+      const body = JSON.stringify({ platform: platformId, donation: donationPackage });
       const bodyBytes = new Blob([body]).size;
       if (bodyBytes > maxDonationBytes) {
         setSubmitError(tooLargeMessage(bodyBytes));
@@ -293,7 +289,7 @@ const FilterPage = ({ parsedData }) => {
       setSubmitError(null);
       setUploadProgress({ loaded: 0, total: bodyBytes });
       try {
-        const { status, json } = await postWithProgress(submitUrl, body, (loaded, total) =>
+        const { status, json } = await postWithProgress(submitUrl, body, captchaToken, (loaded, total) =>
           setUploadProgress({ loaded, total })
         );
         if (status < 200 || status >= 300 || !json.ok) {

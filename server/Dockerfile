@@ -9,6 +9,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 
+# Run unprivileged; the host data dir must be owned by this uid.
+RUN useradd --system --uid 10001 --no-create-home donor
+USER 10001
+
 # Donations DB lives on a mounted volume so it persists across restarts.
 ENV DONATION_DB=/data/donations.sqlite
 VOLUME /data
