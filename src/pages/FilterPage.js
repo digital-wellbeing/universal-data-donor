@@ -6,6 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useConfig } from '../ConfigContext';
 import TurnstileWidget from '../components/TurnstileWidget';
 import { startFilterTour, hasSeenFilterTour } from '../components/filterTour';
+import postWithProgress from '../utils/postWithProgress';
 
 // Keys that are internal bookkeeping and must never be shown as columns or
 // included in the donated data. `id`/`selected` are added by UploadPage; any
@@ -38,6 +39,7 @@ const FilterPage = ({ parsedData }) => {
   const [captchaKey, setCaptchaKey] = useState(0); // bump to remount widget for a fresh token
   const [submitError, setSubmitError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null); // {loaded, total} while sending
 
   const navigate = useNavigate();
 
@@ -289,22 +291,22 @@ const FilterPage = ({ parsedData }) => {
       }
       setSubmitting(true);
       setSubmitError(null);
+      setUploadProgress({ loaded: 0, total: bodyBytes });
       try {
-        const res = await fetch(submitUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body,
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || !json.ok) {
+        const { status, json } = await postWithProgress(submitUrl, body, (loaded, total) =>
+          setUploadProgress({ loaded, total })
+        );
+        if (status < 200 || status >= 300 || !json.ok) {
           setSubmitting(false);
+          setUploadProgress(null);
           setCaptchaToken('');
           setCaptchaKey((k) => k + 1); // remount widget for a fresh single-use token
-          setSubmitError(submitErrorMessage(json.error, res.status));
+          setSubmitError(submitErrorMessage(json.error, status));
           return;
         }
       } catch (e) {
         setSubmitting(false);
+        setUploadProgress(null);
         setCaptchaToken('');
         setCaptchaKey((k) => k + 1);
         setSubmitError('Could not reach the server. Please check your connection and try again.');
@@ -542,6 +544,32 @@ const FilterPage = ({ parsedData }) => {
           {submitError && (
             <div className="alert alert-danger" role="alert">{submitError}</div>
           )}
+          {submitting && uploadProgress && (() => {
+            const pct = uploadProgress.total
+              ? Math.min(100, Math.round((uploadProgress.loaded / uploadProgress.total) * 100))
+              : 0;
+            return (
+              <div className="mt-3" role="status" aria-live="polite">
+                <div className="progress" style={{ height: '1.25rem' }}>
+                  <div
+                    className={`progress-bar bg-success${pct < 100 ? ' progress-bar-striped progress-bar-animated' : ''}`}
+                    role="progressbar"
+                    style={{ width: `${pct}%` }}
+                    aria-valuenow={pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    {pct}%
+                  </div>
+                </div>
+                <small className="text-muted">
+                  {pct < 100
+                    ? `Sending ${formatMb(uploadProgress.loaded)} of ${formatMb(uploadProgress.total)}…`
+                    : 'Upload complete. Waiting for the server to confirm…'}
+                </small>
+              </div>
+            );
+          })()}
           <div className="d-flex mt-3" style={{ gap: '2rem' }}>
             <button
               className="btn btn-success"
