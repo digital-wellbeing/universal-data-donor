@@ -132,6 +132,29 @@ print(json.dumps(dict(id=r[0], platform=r[1], received_at=r[2], total_tables=r[3
 " > "/home/$OWNER/latest-donation.json"
       chown "$OWNER:$OWNER" "/home/$OWNER/latest-donation.json"; chmod 0600 "/home/$OWNER/latest-donation.json"
       python3 -c "import json;d=json.load(open('/home/$OWNER/latest-donation.json'));print('  id=%s platform=%s total_rows=%s payload_prefix=%s' % (d['id'],d['platform'],d['total_rows'],d['payload'][:7]))" ;;
+    --restrict-datadonation)
+      echo "--- Restricting /datadonation routes to the gateway subnet, localhost and Tailscale ---"
+      if grep -q '@ddblocked' "$CADDYFILE"; then
+        echo "    already restricted"
+      else
+        cp -a "$CADDYFILE" "${CADDYFILE}.bak.${STAMP}-restrict"
+        tmp="$(mktemp)"
+        python3 - "$CADDYFILE" "$tmp" <<'PY'
+import sys
+src = open(sys.argv[1]).read()
+marker = "(ddsec) {\n"
+assert src.count(marker) == 1
+add = marker + "\t@ddblocked not remote_ip 172.22.1.0/24 127.0.0.0/8 ::1 100.64.0.0/10\n\trespond @ddblocked \"Forbidden\" 403\n"
+open(sys.argv[2], "w").write(src.replace(marker, add))
+PY
+        caddy validate --adapter caddyfile --config "$tmp"
+        install -m 0644 "$tmp" "$CADDYFILE"; rm -f "$tmp"
+        systemctl reload caddy
+      fi
+      sleep 1
+      printf "  from localhost (expect 200):        "; curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1/datadonation/
+      printf "  from the VM's own LAN IP (expect 403): "; curl -s -o /dev/null -w "%{http_code}\n" "http://$(hostname -I | awk '{print $1}')/datadonation/"
+      printf "  ESMira /pwa/ unaffected (expect 200/30x): "; curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1/pwa/ ;;
     --revoke)
       rm -f /etc/sudoers.d/90-datadonation-deploy
       echo "Revoked: /etc/sudoers.d/90-datadonation-deploy removed." ;;
