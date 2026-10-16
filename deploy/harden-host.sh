@@ -117,8 +117,26 @@ for (ip, xff), n in c.most_common(6): print("  remote_ip=%s  X-Forwarded-For=%s 
 echo ""
 echo "Done. Paste the output above to Claude so XFF_TRUSTED_HOPS / Caddy trusted_proxies can be set."
 
-for flag in "$@"; do
+ARGS=("$@")
+for i in "${!ARGS[@]}"; do
+  flag="${ARGS[$i]}"
   case "$flag" in
+    --delete-donation)
+      ID="${ARGS[$((i+1))]:-}"
+      [[ "$ID" =~ ^[0-9]+$ ]] || { echo "ABORT: --delete-donation needs a numeric row id" >&2; exit 1; }
+      echo "--- Deleting donation row $ID (a backup was taken in step 1) ---"
+      docker exec -e DEL_ID="$ID" datadonation-api python -c "
+import os, sqlite3
+i = int(os.environ['DEL_ID'])
+c = sqlite3.connect('/data/donations.sqlite', timeout=30)
+r = c.execute('select id, platform, received_at, total_rows from donations where id = ?', (i,)).fetchone()
+if not r:
+    print('  no row with id', i, '- nothing deleted')
+else:
+    print('  deleting: id=%s platform=%s received_at=%s total_rows=%s' % r)
+    c.execute('delete from donations where id = ?', (i,)); c.commit(); c.execute('VACUUM')
+    print('  rows remaining:', c.execute('select count(*) from donations').fetchone()[0])
+" ;;
     --encrypt-existing)
       echo "--- Encrypting existing plaintext donations (backup taken in step 1) ---"
       docker exec datadonation-api python donation_crypto.py encrypt-existing ;;
