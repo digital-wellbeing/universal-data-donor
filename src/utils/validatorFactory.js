@@ -7,6 +7,7 @@ const validatorImporters = {
   appleHealthValidator: () => import('../validators/appleHealthValidator.js'),
   healthConnectValidator: () => import('../validators/healthConnectValidator.js'),
   fitbitValidator: () => import('../validators/fitbitValidator.js'),
+  samsungHealthValidator: () => import('../validators/samsungHealthValidator.js'),
 };
 
 export const getValidator = async (validatorName) => {
