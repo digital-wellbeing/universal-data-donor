@@ -15,6 +15,12 @@ describe('parseCreateTable', () => {
     expect(res.columns).toEqual(['row_id', 'uuid', 'x', 'odd, name']);
     expect(res.rowidColumn).toBe(0);
     expect(res.withoutRowid).toBe(false);
+    expect(res.virtual.size).toBe(0);
+  });
+
+  test('flags virtual generated columns', () => {
+    const res = parseCreateTable('CREATE TABLE t (a INTEGER, b INTEGER AS (a * 2), c INTEGER AS (a) STORED, d TEXT)');
+    expect(Array.from(res.virtual)).toEqual([1]);
   });
 
   test('no alias when the primary key is not INTEGER', () => {
@@ -60,6 +66,9 @@ describe('openDatabase', () => {
   test('handles quoted identifiers and columns added by ALTER TABLE', () => {
     const db = openDatabase(loadFixture());
     expect(Array.from(db.rows('quoted name'))).toEqual([{ 'a b': 'hello', c: 0 }]);
-    expect(Array.from(db.rows('later'))).toEqual([{ id: 1, v: 'before alter', extra: null }]);
+    expect(Array.from(db.rows('later'))).toEqual([
+      { id: 1, v: 'before alter', gen: null, extra: null },
+      { id: 2, v: 'after alter', gen: null, extra: 'x' }, // virtual column not stored
+    ]);
   });
 });
