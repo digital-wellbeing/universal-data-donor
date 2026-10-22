@@ -12,6 +12,7 @@ const UploadPage = ({ setParsedData }) => {
   const config = useConfig();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(null); // whole percent, for streaming parsers
   const [parsingWarning, setParsingWarning] = useState(null);
   const [parsedDataCache, setParsedDataCache] = useState(null); // eslint-disable-line no-unused-vars
   const navigate = useNavigate();
@@ -38,7 +39,12 @@ const UploadPage = ({ setParsedData }) => {
         // Dynamically load the parser based on config
         const parser = await getParser(config.general.parser);
         // Parse the file before navigating
-        const parseResult = await parser(file);
+        setProgress(null);
+        // Streaming parsers (large wearable exports) report a 0..1 fraction.
+        const parseResult = await parser(file, (fraction) => {
+          const pct = Math.min(100, Math.floor(fraction * 100));
+          setProgress((prev) => (prev === pct ? prev : pct));
+        });
         const parsed = parseResult.data;
         const parsingErrors = parseResult.parsingErrors;
         
@@ -92,6 +98,7 @@ const UploadPage = ({ setParsedData }) => {
         alert('Error parsing file: ' + error.message);
       } finally {
         setLoading(false);
+        setProgress(null);
       }
     }
   };
@@ -138,7 +145,10 @@ const UploadPage = ({ setParsedData }) => {
             <div className="alert alert-warning mt-3">
               <div className="d-flex align-items-center">
                 <CircularProgress size={20} className="me-2" />
-                <span>{config.page.upload.processing}</span>
+                <span>
+                  {config.page.upload.processing}
+                  {progress !== null && ` (${progress}%)`}
+                </span>
               </div>
             </div>
           )}
