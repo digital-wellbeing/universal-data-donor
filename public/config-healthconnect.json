@@ -1,0 +1,82 @@
+{
+  "general": {
+    "displaySubmissionId": true,
+    "platform": "Health Connect",
+    "platformId": "healthconnect",
+    "parser": "healthConnectParser",
+    "validator": "healthConnectValidator",
+    "fileExtensions": [
+      ".zip",
+      ".db"
+    ],
+    "turnstileSitekey": "0x4AAAAAAEQ8u5xZ1gdrl61G"
+  },
+  "header": {
+    "title": "Universal Digital Donor",
+    "logo": "/healthconnect-logo.svg",
+    "logoAlt": "Health Connect icon"
+  },
+  "page": {
+    "consent": {
+      "title": "Android Health Connect Wearables Study",
+      "intro": "You are about to start the process of donating your Android Health Connect data to our study. Health Connect gathers data from the fitness apps and wearables on your phone (for example Fitbit, Samsung Health, Google Fit, Oura or Withings). The data that we ask you to donate will be used for academic research to gain insight into physical activity, sleep, and wellbeing behaviors. Only daily summaries are extracted: movement (steps, distance, energy, floors), heart rate, heart rate variability, blood oxygen and respiration per day, nightly sleep, and your exercise sessions. The titles and notes you typed, exercise GPS routes, body measurements, nutrition, and your device details are never read or transmitted.",
+      "process": "We will walk you through this process step by step. During this process no data is stored or sent to a server. You can filter by date, exclude exercise types, and delete rows from the data before donating. Data will only be donated and stored when you click the button \"Yes, donate\" on the page that shows your data.",
+      "donationAgreement": "By clicking the button \"Yes, donate\":",
+      "agreementPoints": [
+        "you fully and voluntarily agree to donate your data for this research.",
+        "you are aware that when your data is used for academic publications, or made publicly available in some other form, this will be anonymous.",
+        "you are aware that you have the right to withdraw your permission."
+      ],
+      "agreementCheckbox": "I have read and agree with the above terms.",
+      "agreeButton": "I Agree"
+    },
+    "upload": {
+      "title": "Upload File",
+      "intro": "Please export your Health Connect data (Android 14 or newer): open Settings → Health Connect (on some phones Settings → Security and privacy → Privacy → Health Connect) → Manage data → Export data (or \"Backup and restore\" → \"Export\"). Choose to export now, pick a save location such as your Downloads folder, and wait for the file \"Health Connect.zip\" to appear. Upload that .zip file here without unpacking it.",
+      "uploadButton": "Upload file",
+      "selectedFile": "Selected file: ",
+      "processing": "Processing your file... This may take a few moments for large exports.",
+      "noDataFound": "No Health Connect Data Found",
+      "incorrectFile": "The uploaded file might be incorrect, corrupted, or void of Health Connect data.",
+      "possibleIssues": "We were unable to find any recognizable Health Connect data in the uploaded file. This could mean:",
+      "issuePoints": [
+        "The file is not a Health Connect export (\"Health Connect.zip\")",
+        "The export was unpacked and re-zipped without the database file",
+        "The export was interrupted or the file is incomplete",
+        "The wrong file was selected",
+        "No apps on your phone write activity, sleep, or exercise data to Health Connect"
+      ],
+      "unparseableSheets": "Unparseable data:",
+      "checkFile": "Please check that you have uploaded the original Health Connect.zip or contact the researchers for assistance.",
+      "tryAgainButton": "Try Again",
+      "note": "Note: The process to extract the correct data from the file is done on your own computer. No data is stored or sent yet. Extraction may take a while for large exports.",
+      "processingButton": "Processing...",
+      "proceedButton": "Proceed"
+    },
+    "filter": {
+      "loading": "Loading...",
+      "loadingData": "Loading data...",
+      "dataOverview": "Data overview",
+      "intro": "Determine whether you would like to donate the data below. Carefully check the data and adjust when required. You can filter by date range and exclude specific exercise types. With your donation you contribute to the previously described research. Thank you in advance.",
+      "excludeLabel": "Exclude exercise types",
+      "excludePlaceholder": "Select exercise types to remove",
+      "deleteSelectedRows": "Delete selected rows",
+      "donationPrompt": "Do you want to donate the above data?",
+      "donateButton": "Yes, donate",
+      "declineButton": "No",
+      "note": "Note: Sending the data may take several seconds depending on the data size."
+    },
+    "thankyou": {
+      "title": "Thank You!",
+      "successMessage": "Your data has been successfully submitted. Thank you for your contribution!",
+      "submissionId": "Your Submission ID:",
+      "copyId": "Copy ID",
+      "saveId": "Please save this ID for your records.",
+      "declineMessage": "Thank you for your time. Your decision has been recorded and no data has been shared.",
+      "copyToClipboard": {
+        "copy": "Copy to clipboard",
+        "copied": "Copied!"
+      }
+    }
+  }
+}

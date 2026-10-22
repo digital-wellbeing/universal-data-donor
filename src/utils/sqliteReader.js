@@ -16,12 +16,16 @@ const HEADER = 'SQLite format 3\u0000';
 /**
  * Split a CREATE TABLE statement into column names, flagging the rowid alias.
  * @param {string} sql
- * @returns {{columns: string[], rowidColumn: number, withoutRowid: boolean}}
+ * VIRTUAL generated columns (`x INTEGER AS (...)`, which Health Connect adds
+ * by ALTER TABLE) are listed but flagged, because records do not store them.
+ * @returns {{columns: string[], rowidColumn: number, withoutRowid: boolean, virtual: Set<number>}}
  */
 export const parseCreateTable = (sql) => {
   const open = sql.indexOf('(');
   const close = sql.lastIndexOf(')');
-  if (open < 0 || close < open) return { columns: [], rowidColumn: -1, withoutRowid: false };
+  if (open < 0 || close < open) {
+    return { columns: [], rowidColumn: -1, withoutRowid: false, virtual: new Set() };
+  }
   const body = sql.slice(open + 1, close);
 
   // Split on commas at parenthesis depth 0, ignoring quoted text.
@@ -46,6 +50,7 @@ export const parseCreateTable = (sql) => {
   if (cur.trim()) defs.push(cur.trim());
 
   const columns = [];
+  const virtual = new Set();
   let rowidColumn = -1;
   for (const def of defs) {
     if (/^(CONSTRAINT|PRIMARY\s+KEY|UNIQUE|CHECK|FOREIGN\s+KEY)\b/i.test(def)) continue;
@@ -56,11 +61,13 @@ export const parseCreateTable = (sql) => {
     if (/^INTEGER\b/i.test(rest) && /\bPRIMARY\s+KEY\b/i.test(rest) && !/\bPRIMARY\s+KEY\s+DESC\b/i.test(rest)) {
       rowidColumn = columns.length;
     }
+    if (/\bAS\s*\(/i.test(rest) && !/\bSTORED\b/i.test(rest)) virtual.add(columns.length);
     columns.push(name);
   }
   return {
     columns,
     rowidColumn,
+    virtual,
     withoutRowid: /\)\s*WITHOUT\s+ROWID\s*;?\s*$/i.test(sql),
   };
 };
@@ -226,11 +233,17 @@ export function openDatabase(bytes) {
      */
     *rows(name) {
       if (!hasTable(name)) return;
-      const { rootPage, columns, rowidColumn } = tables.get(name);
+      const { rootPage, columns, rowidColumn, virtual } = tables.get(name);
       for (const [rowid, values] of walkTable(rootPage)) {
         const row = {};
+        let v = 0;
         for (let i = 0; i < columns.length; i++) {
-          row[columns[i]] = i < values.length ? values[i] : null;
+          if (virtual.has(i)) {
+            row[columns[i]] = null; // not stored in the record
+          } else {
+            row[columns[i]] = v < values.length ? values[v] : null;
+            v += 1;
+          }
         }
         if (rowidColumn >= 0) row[columns[rowidColumn]] = rowid;
         yield row;
