@@ -5,6 +5,8 @@
 A React application that allows users to donate their gaming platform data for academic research while maintaining full control over what data is shared. Currently supports:
 - **PlayStation** data exports (.xlsx)
 - **Google Play Games Services** data from Google Takeout (.zip)
+- **ActivityWatch** exports
+- Wearables and social media — see [Wearable & social-media exports](#wearable--social-media-exports)
 
 ## 🚀 Live Demo
 
@@ -21,6 +23,38 @@ Try the application here:
 - **Google Play Games**: Upload Google Takeout files (.zip format) containing Google Play Games Services data
 - Platform selection via URL parameter (`?platform=playstation` or `?platform=android`)
 - Automatic format detection for Google Play data (JSON or HTML)
+
+### Wearable & social-media exports
+
+All parsing happens in the browser. Wearable parsers emit daily summaries
+(plus per-night sleep and per-session exercise rows); none emit raw sample
+streams, GPS, profiles, device identifiers or free text.
+
+| `?platform=` | Upload | Tables |
+|---|---|---|
+| `garmin` | Garmin "Export Your Data" .zip | Daily Wellness, VO2max, Sleep, Activities, Devices |
+| `googlefit` | Google Takeout "Fit" .zip | Daily metrics, Sessions |
+| `applehealth` | iPhone Health → Export All Health Data: `export.zip` or `export.xml` (multi-GB, streamed) | Daily Activity, Sleep, Workouts |
+| `healthconnect` | Android Health Connect → Export data: `Health Connect.zip` (SQLite, read by a pure-JS reader) | Daily Activity, Sleep, Exercise |
+| `fitbit` | Google Takeout "Fitbit" / "Google Health" .zip (legacy JSON and 2024–2026 CSV layouts) | Daily Activity, Sleep, Exercise |
+| `samsunghealth` | Samsung Health → Download personal data, folder compressed to .zip | Daily Activity, Sleep, Exercise |
+| `instagram` | Instagram "Download your information" (JSON format) .zip | Daily Activity (counts only), Activity Totals, Topics |
+
+Cross-cutting rules:
+- **Overlapping sources are never summed** (phone + watch + mirrored apps all
+  write steps): each platform uses its own reconciled stream where one exists
+  (Fitbit Global Export, Samsung "Combined" device) and otherwise the largest
+  single-source daily total.
+- **Local days** come from each record's own UTC offset (Apple, Health
+  Connect, Samsung) or from offsets observed in sleep/exercise rows (Fitbit,
+  falling back to the donor's browser time zone). Sleep nights run 18:00→18:00
+  and are dated by the wake-up day.
+- **Instagram** is reduced to per-day counts: no usernames, links, message or
+  comment text, captions, media or search terms leave the parser.
+- Large uploads report progress; the streaming zip reader (`src/utils/zipReader.js`)
+  supports ZIP64 and keeps memory flat (a 700 MB `export.xml` parses in ~5 s
+  with a ~60 MB heap).
+- Test fixtures are synthetic (`scripts/fixtures/` regenerates the binary ones).
 
 ### Data Upload & Processing
 - Automatic parsing and extraction of relevant data tables
@@ -182,7 +216,9 @@ To add support for a new platform:
 3. Register both in `parserFactory.js` and `validatorFactory.js`
 4. Create a configuration file in `public/config-[platform].json`
 5. Add the platform name to the `validPlatforms` array in `ConfigContext.js`
-6. Test with sample data files
+6. Add a card (and its id in `ENABLED_PLATFORM_IDS`) in `PlatformSelector.js`
+7. Add the id to `ALLOWED_PLATFORMS` in `server/app.py`, or submissions are rejected with `unknown_platform`
+8. Test with sample data files (parsers receive `(file, onProgress)`; call `onProgress(0..1)` for long parses)
 
 ## Data Privacy & Security
 
