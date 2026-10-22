@@ -66,12 +66,19 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       logo: '/samsunghealth-logo.svg',
       description: 'Donate your Galaxy Watch and Samsung Health data',
       color: '#15965F'
+    },
+    {
+      id: 'instagram',
+      name: 'Instagram',
+      logo: '/instagram-logo.svg',
+      description: 'Donate counts of your Instagram activity (no content)',
+      color: '#C13584'
     }
   ];
 
   // Only these platforms are shown on the homepage. The others remain fully
   // functional via a direct ?platform=<id> URL — add an id here to re-enable it.
-  const ENABLED_PLATFORM_IDS = ['activitywatch', 'googlefit', 'garmin', 'applehealth', 'healthconnect', 'fitbit', 'samsunghealth'];
+  const ENABLED_PLATFORM_IDS = ['activitywatch', 'googlefit', 'garmin', 'applehealth', 'healthconnect', 'fitbit', 'samsunghealth', 'instagram'];
   const visiblePlatforms = platforms.filter((p) => ENABLED_PLATFORM_IDS.includes(p.id));
 
   const handlePlatformClick = (platformId) => {
@@ -180,7 +187,12 @@ const PlatformSelector = ({ onSelectPlatform }) => {
           <Typography variant="body2" color="text.secondary">
             <strong>Tip:</strong> You can also access a specific platform directly using URL parameters:
             <br />
-            <code>?platform=activitywatch</code>, <code>?platform=googlefit</code> or <code>?platform=garmin</code>
+            {ENABLED_PLATFORM_IDS.map((id, i) => (
+              <React.Fragment key={id}>
+                {i > 0 && ' '}
+                <code>?platform={id}</code>
+              </React.Fragment>
+            ))}
           </Typography>
         </Box>
       </Container>

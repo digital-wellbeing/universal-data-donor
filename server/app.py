@@ -70,7 +70,7 @@ RATE_WINDOW = int(os.environ.get("RATE_WINDOW", "3600"))
 DONATION_PUBLIC_KEY = os.environ.get("DONATION_PUBLIC_KEY", "").strip()
 REQUIRE_ENCRYPTION = os.environ.get("REQUIRE_ENCRYPTION", "") == "1"
 XFF_TRUSTED_HOPS = max(0, int(os.environ.get("XFF_TRUSTED_HOPS", "0")))
-ALLOWED_PLATFORMS = {"playstation", "android", "activitywatch", "googlefit", "garmin", "applehealth", "healthconnect", "fitbit", "samsunghealth"}
+ALLOWED_PLATFORMS = {"playstation", "android", "activitywatch", "googlefit", "garmin", "applehealth", "healthconnect", "fitbit", "samsunghealth", "instagram"}
 
 if REQUIRE_ENCRYPTION and not DONATION_PUBLIC_KEY:
     raise SystemExit("REQUIRE_ENCRYPTION=1 but DONATION_PUBLIC_KEY is not set")
