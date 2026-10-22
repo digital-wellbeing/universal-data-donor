@@ -1,5 +1,5 @@
 import { openZip } from '../utils/zipReader';
-import { forEachCsvRecord } from '../utils/csv';
+import { createCsvRecordStream } from '../utils/csv';
 import {
   fmtNum, formatDuration, dayTimestamp, Stat, SourceTotals, getOrCreate,
 } from '../utils/wearableFormat';
@@ -75,7 +75,8 @@ const CSV_FILES = {
   legacyResp: /^Daily Respiratory Rate Summary - .*\.csv$/i,
 };
 
-const JSON_SOURCE = 'Fitbit';
+// Sentinel key for the reconciled JSON stream; can't collide with a CSV `data source`.
+const JSON_SOURCE = '\u0000json';
 const isHealthConnect = (s) => /health\s*connect/i.test(s);
 const num = (v) => (v === '' || v === null || v === undefined ? NaN : Number(v));
 
@@ -143,12 +144,17 @@ export default async function parseFitbitFile(file, onProgress) {
 
   const totalBytes = allEntries.reduce((a, e) => a + e.compressedSize, 0) || 1;
   let doneBytes = 0;
+  // Errors are labelled by file type, never by path: legacy archives sit
+  // under a folder named after the user (MyFitbitData/<Name>/...).
+  const fail = (key, err) => parsingErrors.tablesNotParsed.push({
+    sheetName: key.replace(/^(json|csv):/, ''), reason: err.message, expectedFormat: key.startsWith('csv') ? 'CSV' : 'JSON',
+  });
   const read = async (key, onText) => {
     for (const e of files[key] || []) {
       try {
         onText(await zip.readText(e));
       } catch (err) {
-        parsingErrors.tablesNotParsed.push({ sheetName: e.name, reason: err.message, expectedFormat: key });
+        fail(key, err);
       }
       doneBytes += e.compressedSize;
       if (onProgress) onProgress(doneBytes / totalBytes);
@@ -159,7 +165,24 @@ export default async function parseFitbitFile(file, onProgress) {
     try { arr = JSON.parse(text); } catch (e) { return; }
     if (Array.isArray(arr)) for (const item of arr) if (item && typeof item === 'object') onItem(item);
   });
-  const readCsv = (key, onRec) => read(key, (text) => forEachCsvRecord(text, onRec));
+  // CSVs are streamed: multi-year heart-rate files can exceed the maximum
+  // string length if read whole.
+  const readCsv = async (key, onRec) => {
+    for (const e of files[key] || []) {
+      const csv = createCsvRecordStream(onRec);
+      const before = doneBytes;
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await zip.streamText(e, (t) => csv.push(t), (f) => {
+          if (onProgress) onProgress((before + f * e.compressedSize) / totalBytes);
+        });
+        csv.end();
+      } catch (err) {
+        fail(key, err);
+      }
+      doneBytes = before + e.compressedSize;
+    }
+  };
 
   const days = new Map();
   const dayOf = (d) => getOrCreate(days, d, newDay);

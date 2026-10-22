@@ -1,5 +1,6 @@
 import { openZip, isZip, readSlice } from '../utils/zipReader';
 import { openDatabase } from '../utils/sqliteReader';
+import sha256Hex from '../utils/sha256';
 import {
   fmtNum, formatDuration, dayTimestamp, formatLocal, localDay, sleepDay,
   humanize, Stat, SourceTotals, getOrCreate,
@@ -17,8 +18,10 @@ import {
  *      SpO2, respiratory rate.
  *   2. "Sleep"          — per night: sleep window and stage minutes.
  *   3. "Exercise"       — per session: type, start, duration, heart rate
- *      during the session, and the Health Connect record UUID so repeat
- *      donations from the same person can be de-duplicated.
+ *      during the session, and a Record Key (salted SHA-256 of the Health
+ *      Connect record UUID) so repeat donations from the same person can be
+ *      de-duplicated without exporting the UUID itself, which apps can derive
+ *      from their own record IDs.
  *
  * Never read: session titles and notes (free text), exercise routes (GPS),
  * weight / body measurements, nutrition, and every other table. Several apps
@@ -77,6 +80,10 @@ export const uuidToString = (blob) => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
+// Salt for Record Keys; bump the version to unlink keys across studies.
+const RECORD_KEY_SALT = 'universal-data-donor/healthconnect/v1';
+export const recordKey = (uuid) => (uuid ? sha256Hex(`${RECORD_KEY_SALT}|${uuid}`).slice(0, 20) : '');
+
 const offsetMin = (seconds) => (Number.isFinite(Number(seconds)) ? Number(seconds) / 60 : 0);
 
 const newNightSource = () => ({
@@ -97,13 +104,7 @@ const loadDatabaseBytes = async (file, onProgress) => {
     .sort((a, b) => (/health_connect_export\.db$/i.test(b.name) - /health_connect_export\.db$/i.test(a.name))
       || b.size - a.size);
   if (dbs.length === 0) return null;
-  const parts = [];
-  let total = 0;
-  await zip.stream(dbs[0], (c) => { parts.push(c); total += c.length; }, onProgress);
-  const out = new Uint8Array(total);
-  let off = 0;
-  for (const c of parts) { out.set(c, off); off += c.length; }
-  return out;
+  return zip.readBytes(dbs[0], onProgress);
 };
 
 export default async function parseHealthConnectFile(file, onProgress) {
@@ -141,55 +142,85 @@ export default async function parseHealthConnectFile(file, onProgress) {
     return { data, parsingErrors };
   }
 
+  // Each table is read in its own guard: a corrupt page or row in one table
+  // is reported and skipped without losing the others.
+  const safely = (table, fn) => {
+    try {
+      fn();
+    } catch (error) {
+      parsingErrors.tablesNotParsed.push({
+        sheetName: table,
+        reason: `Failed to read this part of the database: ${error.message}`,
+        expectedFormat: 'health_connect_export.db',
+      });
+    }
+  };
+
   // App labels: the app's display name (e.g. "Fit", "Samsung Health").
   const apps = new Map();
-  for (const row of db.rows('application_info_table')) {
-    apps.set(row.row_id, row.app_name || row.package_name || 'Unknown app');
-  }
+  safely('Apps', () => {
+    for (const row of db.rows('application_info_table')) {
+      apps.set(row.row_id, row.app_name || row.package_name || 'Unknown app');
+    }
+  });
   const appLabel = (id) => apps.get(id) || 'Unknown app';
 
   const days = new Map();
   const newDay = () => ({ cumulative: new Map(), sampled: new Map() });
 
-  try {
+  {
     // ---- Cumulative interval records ------------------------------------
     for (const [table, column, key, scale] of DAILY_CUMULATIVE) {
-      for (const row of db.rows(table)) {
-        const v = Number(row[column]) * scale;
-        const day = localDay(Number(row.start_time), offsetMin(row.start_zone_offset));
-        if (!day || !Number.isFinite(v)) continue;
-        getOrCreate(getOrCreate(days, day, newDay).cumulative, key, () => new SourceTotals())
-          .add(appLabel(row.app_info_id), v);
-      }
+      safely(table, () => {
+        for (const row of db.rows(table)) {
+          const v = Number(row[column]) * scale;
+          const day = localDay(Number(row.start_time), offsetMin(row.start_zone_offset));
+          if (!day || !Number.isFinite(v)) continue;
+          getOrCreate(getOrCreate(days, day, newDay).cumulative, key, () => new SourceTotals())
+            .add(appLabel(row.app_info_id), v);
+        }
+      });
     }
 
     // ---- Instantaneous samples -----------------------------------------
     for (const [table, column, key] of DAILY_SAMPLED) {
-      for (const row of db.rows(table)) {
-        const v = Number(row[column]);
-        const day = localDay(Number(row.time), offsetMin(row.zone_offset));
-        if (!day || !Number.isFinite(v)) continue;
-        getOrCreate(getOrCreate(days, day, newDay).sampled, key, () => new Stat()).add(v);
-      }
+      safely(table, () => {
+        for (const row of db.rows(table)) {
+          const v = Number(row[column]);
+          const day = localDay(Number(row.time), offsetMin(row.zone_offset));
+          if (!day || !Number.isFinite(v)) continue;
+          getOrCreate(getOrCreate(days, day, newDay).sampled, key, () => new Stat()).add(v);
+        }
+      });
     }
 
     // ---- Exercise sessions (needed before heart-rate samples) ----------
     const sessions = [];
-    for (const row of db.rows('exercise_session_record_table')) {
-      const start = Number(row.start_time);
-      const end = Number(row.end_time);
-      if (!Number.isFinite(start)) continue;
-      sessions.push({
-        start, end, offset: offsetMin(row.start_zone_offset),
-        type: Number(row.exercise_type),
-        app: appLabel(row.app_info_id),
-        uuid: uuidToString(row.uuid),
-        hr: new Stat(),
-      });
-    }
+    safely('exercise_session_record_table', () => {
+      for (const row of db.rows('exercise_session_record_table')) {
+        const start = Number(row.start_time);
+        const end = Number(row.end_time);
+        if (!Number.isFinite(start) || !localDay(start)) continue;
+        sessions.push({
+          start, end, offset: offsetMin(row.start_zone_offset),
+          type: Number(row.exercise_type),
+          app: appLabel(row.app_info_id),
+          key: recordKey(uuidToString(row.uuid)),
+          hr: new Stat(),
+        });
+      }
+    });
     sessions.sort((a, b) => a.start - b.start);
+    // Running maximum of end times, so the backwards scan below can stop as
+    // soon as no earlier session can still contain the instant, however long
+    // an earlier session was.
+    const maxEnd = [];
+    for (let i = 0; i < sessions.length; i++) {
+      const e = Number.isFinite(sessions[i].end) ? sessions[i].end : sessions[i].start;
+      maxEnd.push(i > 0 ? Math.max(maxEnd[i - 1], e) : e);
+    }
 
-    /** Sessions whose [start, end] window contains `ms` (binary search). */
+    /** Sessions whose [start, end] window contains `ms`. */
     const sessionsAt = (ms) => {
       let lo = 0;
       let hi = sessions.length;
@@ -199,7 +230,7 @@ export default async function parseHealthConnectFile(file, onProgress) {
         else hi = mid;
       }
       const hits = [];
-      for (let i = lo - 1; i >= 0 && i >= lo - 4; i--) {
+      for (let i = lo - 1; i >= 0 && maxEnd[i] >= ms; i--) {
         if (ms <= sessions[i].end) hits.push(sessions[i]);
       }
       return hits;
@@ -207,17 +238,21 @@ export default async function parseHealthConnectFile(file, onProgress) {
 
     // ---- Heart-rate series ---------------------------------------------
     const hrParents = new Map();
-    for (const row of db.rows('heart_rate_record_table')) {
-      hrParents.set(row.row_id, offsetMin(row.start_zone_offset));
-    }
-    for (const row of db.rows('heart_rate_record_series_table')) {
-      const ms = Number(row.epoch_millis);
-      const bpm = Number(row.beats_per_minute);
-      if (!Number.isFinite(ms) || !Number.isFinite(bpm)) continue;
-      const day = localDay(ms, hrParents.get(row.parent_key) || 0);
-      getOrCreate(getOrCreate(days, day, newDay).sampled, 'hr', () => new Stat()).add(bpm);
-      if (sessions.length > 0) for (const s of sessionsAt(ms)) s.hr.add(bpm);
-    }
+    safely('heart_rate_record_table', () => {
+      for (const row of db.rows('heart_rate_record_table')) {
+        hrParents.set(row.row_id, offsetMin(row.start_zone_offset));
+      }
+    });
+    safely('heart_rate_record_series_table', () => {
+      for (const row of db.rows('heart_rate_record_series_table')) {
+        const ms = Number(row.epoch_millis);
+        const bpm = Number(row.beats_per_minute);
+        const day = localDay(ms, hrParents.get(row.parent_key) || 0);
+        if (!day || !Number.isFinite(bpm)) continue;
+        getOrCreate(getOrCreate(days, day, newDay).sampled, 'hr', () => new Stat()).add(bpm);
+        if (sessions.length > 0) for (const s of sessionsAt(ms)) s.hr.add(bpm);
+      }
+    });
 
     // ---- Exercise rows --------------------------------------------------
     const exerciseRows = sessions.map((s) => {
@@ -230,7 +265,7 @@ export default async function parseHealthConnectFile(file, onProgress) {
         'Avg HR (bpm)': fmtNum(s.hr.mean, 0),
         'Max HR (bpm)': fmtNum(s.hr.hi, 0),
         Source: s.app,
-        'Record ID': s.uuid,
+        'Record Key': s.key,
         _timestamp: s.start,
         _app: activity,
       };
@@ -241,7 +276,7 @@ export default async function parseHealthConnectFile(file, onProgress) {
     // ---- Sleep ----------------------------------------------------------
     const nights = new Map();
     const sessionById = new Map();
-    for (const row of db.rows('sleep_session_record_table')) {
+    safely('sleep_session_record_table', () => { for (const row of db.rows('sleep_session_record_table')) {
       const start = Number(row.start_time);
       const end = Number(row.end_time);
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
@@ -253,13 +288,15 @@ export default async function parseHealthConnectFile(file, onProgress) {
       acc.end = Math.max(acc.end, end);
       acc.offset = offset;
       sessionById.set(row.row_id, acc);
-    }
-    for (const row of db.rows('sleep_stages_table')) {
-      const acc = sessionById.get(row.parent_key);
-      const key = STAGE_KEY[row.stage_type];
-      const minutes = (Number(row.stage_end_time) - Number(row.stage_start_time)) / 60000;
-      if (acc && key && Number.isFinite(minutes) && minutes > 0) acc[key] += minutes;
-    }
+    } });
+    safely('sleep_stages_table', () => {
+      for (const row of db.rows('sleep_stages_table')) {
+        const acc = sessionById.get(row.parent_key);
+        const key = STAGE_KEY[row.stage_type];
+        const minutes = (Number(row.stage_end_time) - Number(row.stage_start_time)) / 60000;
+        if (acc && key && Number.isFinite(minutes) && minutes > 0) acc[key] += minutes;
+      }
+    });
 
     const sleepRows = [];
     for (const [date, byApp] of nights) {
@@ -293,12 +330,6 @@ export default async function parseHealthConnectFile(file, onProgress) {
     sleepRows.sort((a, b) => a.Date.localeCompare(b.Date));
     if (sleepRows.length > 0) data['Sleep'] = sleepRows;
     else parsingErrors.sheetsNotFound.push('Sleep');
-  } catch (error) {
-    parsingErrors.tablesNotParsed.push({
-      sheetName: 'Health Connect Export',
-      reason: `Failed to read the database: ${error.message}`,
-      expectedFormat: 'health_connect_export.db',
-    });
   }
 
   // ---- Daily Activity ----------------------------------------------------

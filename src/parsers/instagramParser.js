@@ -165,8 +165,9 @@ export default async function parseInstagramFile(file, onProgress) {
   const days = new Map();
   const totals = new Map();
   const bump = (category, ms) => {
-    if (!Number.isFinite(ms)) return;
-    const day = dayOfMs(ms);
+    // Out-of-range values (e.g. ms written where seconds belong) are skipped.
+    const day = Number.isFinite(ms) ? dayOfMs(ms) : '';
+    if (!day) return;
     const counts = getOrCreate(days, day, () => new Map());
     counts.set(category, (counts.get(category) || 0) + 1);
     const t = getOrCreate(totals, category, () => ({ count: 0, first: Infinity, last: -Infinity }));

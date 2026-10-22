@@ -154,6 +154,16 @@ describe('parseSamsungHealthFile', () => {
     }
   });
 
+  test('an empty energy cell does not overwrite a value from another row', async () => {
+    const res = await parseSamsungHealthFile(await upload({
+      [`x/com.samsung.shealth.calories_burned.details.${STAMP}.csv`]:
+        'com.samsung.shealth.calories_burned.details,1,1\nday_time,active_calorie,rest_calorie\n2026-01-12 00:00:00.000,650,1500,\n2026-01-12 00:00:00.000,,1400,\n',
+      [`x/com.samsung.shealth.tracker.pedometer_day_summary.${STAMP}.csv`]:
+        'day_time,step_count,calorie,deviceuuid\n2026-01-12 00:00:00.000,100,300,VfS0qUERdZ\n',
+    }));
+    expect(res.data['Daily Activity'][0]['Active Energy (kcal)']).toBe('650');
+  });
+
   test('tolerates a stripped metadata line and semicolon re-saves', async () => {
     const res = await parseSamsungHealthFile(await upload({
       [`x/com.samsung.shealth.tracker.pedometer_day_summary.${STAMP}.csv`]:

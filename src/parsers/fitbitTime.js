@@ -112,7 +112,8 @@ export class Localizer {
     if (!hit) {
       const start = bucket * 900000;
       const offset = this.offsetAt(start);
-      hit = { offset, day: new Date(start + offset * 60000).toISOString().slice(0, 10) };
+      const d = new Date(start + offset * 60000);
+      hit = { offset, day: isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10) };
       this.dayCache.set(bucket, hit);
     }
     return hit;
@@ -120,9 +121,18 @@ export class Localizer {
 }
 
 /** Wall-clock ms (UTC-interpreted) → "YYYY-MM-DD HH:MM". */
-export const formatWall = (wallMs) => (Number.isFinite(wallMs)
-  ? new Date(wallMs).toISOString().slice(0, 16).replace('T', ' ')
-  : '');
+const validDate = (ms) => {
+  const d = Number.isFinite(ms) ? new Date(ms) : null;
+  return d && !isNaN(d.getTime()) ? d : null;
+};
+
+export const formatWall = (wallMs) => {
+  const d = validDate(wallMs);
+  return d ? d.toISOString().slice(0, 16).replace('T', ' ') : '';
+};
 
 /** Wall-clock ms (UTC-interpreted) → "YYYY-MM-DD". */
-export const wallDay = (wallMs) => (Number.isFinite(wallMs) ? new Date(wallMs).toISOString().slice(0, 10) : '');
+export const wallDay = (wallMs) => {
+  const d = validDate(wallMs);
+  return d ? d.toISOString().slice(0, 10) : '';
+};

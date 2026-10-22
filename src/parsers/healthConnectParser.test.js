@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
-import parseHealthConnectFile, { uuidToString } from './healthConnectParser';
+import parseHealthConnectFile, { uuidToString, recordKey } from './healthConnectParser';
 import validateHealthConnectData from '../validators/healthConnectValidator';
 
 // Synthetic export built by scripts/fixtures/make_health_connect_fixture.py
@@ -54,7 +54,7 @@ describe('parseHealthConnectFile', () => {
     expect(night['Sources Recorded']).toBe('2');
   });
 
-  test('exercise sessions carry type, HR and the record UUID', () => {
+  test('exercise sessions carry type, HR and a salted record key (not the UUID)', () => {
     const [run, unknown] = result.data.Exercise;
     expect(run.Activity).toBe('Running');
     expect(run['Start Time']).toBe('2026-01-01 19:00');
@@ -62,7 +62,9 @@ describe('parseHealthConnectFile', () => {
     expect(run['Avg HR (bpm)']).toBe('150');
     expect(run['Max HR (bpm)']).toBe('160');
     expect(run.Source).toBe('Fit');
-    expect(run['Record ID']).toMatch(/^12345678-9abc-4def-8000-0000000000[0-9a-f]{2}$/);
+    expect(run['Record Key']).toMatch(/^[0-9a-f]{20}$/);
+    expect(unknown['Record Key']).not.toBe(run['Record Key']);
+    expect(JSON.stringify(result.data)).not.toMatch(/12345678-9abc/);
     expect(run._app).toBe('Running');
     expect(unknown.Activity).toBe('Type 999');
   });
@@ -81,6 +83,16 @@ describe('parseHealthConnectFile', () => {
     expect(res.data).toEqual(result.data);
   });
 
+  test('a corrupt b-tree page is reported per table instead of throwing', async () => {
+    const zip = await JSZip.loadAsync(fs.readFileSync(path.join(__dirname, '__fixtures__', 'health_connect_export.zip')));
+    const db = await zip.file('health_connect_export.db').async('uint8array');
+    const pageSize = (db[16] << 8) | db[17];
+    db[pageSize * 2] = 0x07; // page 3: invalid page type
+    const res = await parseHealthConnectFile(new Blob([db]));
+    expect(res.parsingErrors.tablesNotParsed.length).toBeGreaterThan(0);
+    expect(res.parsingErrors.tablesNotParsed[0].reason).toMatch(/b-tree page type 7/);
+  });
+
   test('rejects other files', async () => {
     const zip = new JSZip();
     zip.file('notes.txt', 'hello');
@@ -91,6 +103,14 @@ describe('parseHealthConnectFile', () => {
     const res2 = await parseHealthConnectFile(new Blob(['not sqlite at all, just some text padding'.repeat(5)]));
     expect(res2.parsingErrors.tablesNotParsed[0].reason).toMatch(/Not a SQLite database/);
   });
+});
+
+test('recordKey is a deterministic salted hash', () => {
+  const uuid = '12345678-9abc-4def-8000-000000000001';
+  expect(recordKey(uuid)).toBe(recordKey(uuid));
+  expect(recordKey(uuid)).toMatch(/^[0-9a-f]{20}$/);
+  expect(recordKey(uuid)).not.toBe(recordKey('12345678-9abc-4def-8000-000000000002'));
+  expect(recordKey('')).toBe('');
 });
 
 test('uuidToString', () => {

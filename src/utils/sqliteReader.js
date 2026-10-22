@@ -18,13 +18,15 @@ const HEADER = 'SQLite format 3\u0000';
  * @param {string} sql
  * VIRTUAL generated columns (`x INTEGER AS (...)`, which Health Connect adds
  * by ALTER TABLE) are listed but flagged, because records do not store them.
- * @returns {{columns: string[], rowidColumn: number, withoutRowid: boolean, virtual: Set<number>}}
+ * Literal DEFAULT values are captured too: rows written before an
+ * `ALTER TABLE ... ADD COLUMN ... DEFAULT x` are shorter and read as x.
+ * @returns {{columns: string[], rowidColumn: number, withoutRowid: boolean, virtual: Set<number>, defaults: Array}}
  */
 export const parseCreateTable = (sql) => {
   const open = sql.indexOf('(');
   const close = sql.lastIndexOf(')');
   if (open < 0 || close < open) {
-    return { columns: [], rowidColumn: -1, withoutRowid: false, virtual: new Set() };
+    return { columns: [], rowidColumn: -1, withoutRowid: false, virtual: new Set(), defaults: [] };
   }
   const body = sql.slice(open + 1, close);
 
@@ -51,6 +53,7 @@ export const parseCreateTable = (sql) => {
 
   const columns = [];
   const virtual = new Set();
+  const defaults = [];
   let rowidColumn = -1;
   for (const def of defs) {
     if (/^(CONSTRAINT|PRIMARY\s+KEY|UNIQUE|CHECK|FOREIGN\s+KEY)\b/i.test(def)) continue;
@@ -62,12 +65,22 @@ export const parseCreateTable = (sql) => {
       rowidColumn = columns.length;
     }
     if (/\bAS\s*\(/i.test(rest) && !/\bSTORED\b/i.test(rest)) virtual.add(columns.length);
+    const dm = rest.match(/\bDEFAULT\s+(?:\(\s*)?(?:'((?:[^']|'')*)'|([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(NULL|TRUE|FALSE)\b)/i);
+    let defaultValue = null;
+    if (dm) {
+      if (dm[1] !== undefined) defaultValue = dm[1].replace(/''/g, "'");
+      else if (dm[2] !== undefined) defaultValue = Number(dm[2]);
+      else if (/true/i.test(dm[3])) defaultValue = 1;
+      else if (/false/i.test(dm[3])) defaultValue = 0;
+    }
+    defaults.push(defaultValue);
     columns.push(name);
   }
   return {
     columns,
     rowidColumn,
     virtual,
+    defaults,
     withoutRowid: /\)\s*WITHOUT\s+ROWID\s*;?\s*$/i.test(sql),
   };
 };
@@ -233,7 +246,7 @@ export function openDatabase(bytes) {
      */
     *rows(name) {
       if (!hasTable(name)) return;
-      const { rootPage, columns, rowidColumn, virtual } = tables.get(name);
+      const { rootPage, columns, rowidColumn, virtual, defaults } = tables.get(name);
       for (const [rowid, values] of walkTable(rootPage)) {
         const row = {};
         let v = 0;
@@ -241,7 +254,7 @@ export function openDatabase(bytes) {
           if (virtual.has(i)) {
             row[columns[i]] = null; // not stored in the record
           } else {
-            row[columns[i]] = v < values.length ? values[v] : null;
+            row[columns[i]] = v < values.length ? values[v] : defaults[i];
             v += 1;
           }
         }
