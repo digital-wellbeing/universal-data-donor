@@ -70,7 +70,9 @@ export const formatLocal = (epochMs, offsetMinutes = 0) => {
  */
 export const localDay = (epochMs, offsetMinutes = 0) => {
   if (!Number.isFinite(epochMs)) return '';
-  return new Date(epochMs + offsetMinutes * 60000).toISOString().slice(0, 10);
+  const d = new Date(epochMs + offsetMinutes * 60000);
+  // Out-of-range instants (e.g. ms written where seconds belong) are blank.
+  return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
 };
 
 /**

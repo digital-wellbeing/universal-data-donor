@@ -1,5 +1,5 @@
 import { openZip } from '../utils/zipReader';
-import { forEachCsvRecord } from '../utils/csv';
+import { createCsvRecordStream } from '../utils/csv';
 import {
   fmtNum, formatDuration, dayTimestamp, formatLocal, localDay, sleepDay, Stat, getOrCreate,
 } from '../utils/wearableFormat';
@@ -154,25 +154,34 @@ export default async function parseSamsungHealthFile(file, onProgress) {
   let doneBytes = 0;
   const read = async (type, onRec) => {
     for (const e of byType.get(type) || []) {
+      const before = doneBytes;
       try {
-        const text = await zip.readText(e);
-        const firstLine = text.slice(0, Math.max(0, text.search(/\r\n|\n|\r/))).replace(/^﻿/, '');
-        // Metadata line "<type>,<n1>,<n2>" (users sometimes strip it), and
-        // Excel re-saves with ';' as the delimiter.
-        const first = firstLine.split(/[;,]/);
-        const skipLines = first[0].startsWith('com.samsung') && first.length <= 3 ? 1 : 0;
-        const headerLine = skipLines ? text.split(/\r\n|\n|\r/, 2)[1] || '' : firstLine;
-        const delimiter = (headerLine.match(/;/g) || []).length > (headerLine.match(/,/g) || []).length ? ';' : ',';
         let get = null;
-        forEachCsvRecord(text, (rec, header) => {
+        const csv = createCsvRecordStream((rec, header) => {
           if (!get) get = makeGetter(header);
           onRec(rec, get);
-        }, { skipLines, delimiter });
+        }, {
+          // Metadata line "<type>,<n1>,<n2>" (users sometimes strip it), and
+          // Excel re-saves with ';' as the delimiter.
+          detect: (line1, line2) => {
+            const first = line1.split(/[;,]/);
+            const skipLines = first[0].startsWith('com.samsung') && first.length <= 3 ? 1 : 0;
+            const header = skipLines ? line2 : line1;
+            const semis = (header.match(/;/g) || []).length;
+            return { skipLines, delimiter: semis > (header.match(/,/g) || []).length ? ';' : ',' };
+          },
+        });
+        // Streamed: multi-year heart-rate CSVs can exceed the maximum string length.
+        // eslint-disable-next-line no-await-in-loop
+        await zip.streamText(e, (t) => csv.push(t), (f) => {
+          if (onProgress) onProgress((before + f * e.compressedSize) / totalBytes);
+        });
+        csv.end();
       } catch (err) {
+        // Labelled by data type only: the path contains the account name.
         parsingErrors.tablesNotParsed.push({ sheetName: type, reason: err.message, expectedFormat: 'CSV' });
       }
-      doneBytes += e.compressedSize;
-      if (onProgress) onProgress(doneBytes / totalBytes);
+      doneBytes = before + e.compressedSize;
     }
   };
 
@@ -211,8 +220,9 @@ export default async function parseSamsungHealthFile(file, onProgress) {
     const d = dayOf(date);
     const active = num(get(r, 'active_calorie'));
     const rest = num(get(r, 'rest_calorie'));
-    if (!(active <= d.activeEnergy)) d.activeEnergy = active;
-    if (!(rest <= d.restEnergy)) d.restEnergy = rest;
+    // Keep the largest value; an empty cell (NaN) must not overwrite one.
+    if (Number.isFinite(active) && !(active <= d.activeEnergy)) d.activeEnergy = active;
+    if (Number.isFinite(rest) && !(rest <= d.restEnergy)) d.restEnergy = rest;
   });
   await read(TYPES.activity, (r, get) => {
     const date = parseDayTime(get(r, 'day_time'));

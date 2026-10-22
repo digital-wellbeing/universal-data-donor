@@ -1,7 +1,7 @@
 import { openZip, isZip, streamBlobText } from '../utils/zipReader';
 import { createTagScanner, getAttr } from '../utils/xmlTagStream';
 import {
-  fmtNum, formatDuration, dayTimestamp, formatLocal, sleepDay, stripOwnerName,
+  fmtNum, formatDuration, dayTimestamp, formatLocal, sleepDay,
   humanize, Stat, SourceTotals, getOrCreate, detach,
 } from '../utils/wearableFormat';
 
@@ -29,8 +29,12 @@ import {
  * Overlapping sources (iPhone + Apple Watch + third-party apps all writing
  * steps) are not summed: cumulative metrics keep the largest single-source
  * daily total. Each sample's own UTC offset decides its local day, so travel
- * and DST shifts land on the right calendar date. Device names default to
- * "<name>'s Apple Watch", so source labels are reduced to the device model.
+ * and DST shifts land on the right calendar date.
+ *
+ * Source names are user-editable device names ("Alex’s Apple Watch", or a
+ * phone renamed to a full name), so they are never emitted. De-duplication
+ * is keyed on the raw source internally; the visible label is the Apple
+ * device model, a known health app's canonical name, or "Other source N".
  *
  * @param {File} file
  * @param {(fraction: number) => void} [onProgress]
@@ -120,29 +124,44 @@ export const parseAppleDate = (s) => {
   return { ms, offset, day: m[1] };
 };
 
+// Allow-list of source labels: [canonical label, pattern on sourceName].
+// Anything else becomes "Other source N", because the name may be personal.
+const KNOWN_SOURCES = [
+  ['Apple Watch', /apple\s*watch/i], ['iPhone', /iphone/i], ['iPad', /ipad/i],
+  ['Health app', /^(health|santé|salud|salute|gezondheid|gesundheit|здоровье)$/i], ['Clock app', /^(clock|uhr|horloge|reloj)$/i],
+  ['AutoSleep', /autosleep/i], ['Oura', /\boura\b/i], ['WHOOP', /\bwhoop\b/i],
+  ['Withings', /withings|health mate/i], ['Garmin Connect', /\bgarmin\b/i], ['Fitbit', /\bfitbit\b/i],
+  ['Google Fit', /google fit/i], ['Strava', /\bstrava\b/i], ['Polar', /\bpolar\b/i], ['Suunto', /\bsuunto\b/i],
+  ['COROS', /\bcoros\b/i], ['Zepp / Amazfit', /\bzepp\b|amazfit/i], ['Mi Fitness', /\bmi fit(ness)?\b/i],
+  ['Samsung Health', /samsung health/i], ['Huawei Health', /huawei/i], ['Sleep Cycle', /sleep cycle/i],
+  ['Pillow', /\bpillow\b/i], ['SleepWatch', /sleepwatch/i], ['Sleep++', /sleep\+\+/i], ['Rise', /^rise\b/i],
+  ['Eight Sleep', /eight sleep/i], ['Ultrahuman', /ultrahuman/i], ['Nike Run Club', /\bnike\b/i],
+  ['Runkeeper', /runkeeper/i], ['MyFitnessPal', /myfitnesspal/i], ['Peloton', /\bpeloton\b/i],
+  ['Zwift', /\bzwift\b/i], ['Wahoo', /\bwahoo\b/i], ['Komoot', /\bkomoot\b/i],
+];
+
 /**
- * Non-identifying label for a record's source. Apple devices are reported by
- * model (from the `device` attribute); other sources are app names, with any
- * "<name>'s " owner prefix removed.
+ * Non-identifying label for a record's source, or null when the source is
+ * not recognised (the caller numbers those "Other source N"). Apple devices
+ * are reported by model from the `device` attribute, which Apple sets;
+ * otherwise the source name must match the allow-list, and only the
+ * canonical label is returned, never the raw name.
  * @param {string} sourceName
  * @param {string} [device]
- * @returns {string}
+ * @returns {string|null}
  */
 export const sourceLabel = (sourceName, device) => {
   if (device) {
     const manufacturer = (device.match(/manufacturer:([^,>]+)/) || [])[1] || '';
     const model = ((device.match(/model:([^,>]+)/) || [])[1] || '').trim();
-    if (/apple/i.test(manufacturer) && model) {
-      return model === 'Watch' ? 'Apple Watch' : model;
+    if (/apple/i.test(manufacturer)) {
+      if (model === 'Watch') return 'Apple Watch';
+      if (/^(iPhone|iPad|iPod)$/.test(model)) return model;
     }
   }
-  // Without a device attribute, Apple devices are recognised by name in any
-  // language ("Alex’s iPhone", "Apple Watch von Alex", "iPhone de Marie").
   const name = sourceName || '';
-  if (/apple\s*watch/i.test(name)) return 'Apple Watch';
-  if (/iphone/i.test(name)) return 'iPhone';
-  if (/ipad/i.test(name)) return 'iPad';
-  return stripOwnerName(name) || 'Unknown';
+  for (const [canonical, re] of KNOWN_SOURCES) if (re.test(name)) return canonical;
+  return null;
 };
 
 const newDay = () => ({
@@ -166,7 +185,22 @@ export default async function parseAppleHealthFile(file, onProgress) {
   const days = new Map();
   const nights = new Map();
   const workouts = [];
-  const labelCache = new Map();
+  // Internal source ids: totals and nights are keyed by these so two different
+  // apps never merge just because they map to the same public label.
+  const sourceIds = new Map();
+  const sourceMeta = [];
+  const publicLabels = new Map();
+  let otherSources = 0;
+  const publicLabel = (id) => {
+    if (id === '' || id === undefined) return '';
+    let lbl = publicLabels.get(id);
+    if (lbl === undefined) {
+      const meta = sourceMeta[id];
+      lbl = sourceLabel(meta.name, meta.device) || `Other source ${++otherSources}`;
+      publicLabels.set(id, lbl);
+    }
+    return lbl;
+  };
   let sawHealthData = false;
   let correlationDepth = 0;
   let workout = null;
@@ -179,12 +213,13 @@ export default async function parseAppleHealthFile(file, onProgress) {
     const key = device
       ? `${sourceName}|${(device.match(/model:[^,>]*/) || [''])[0]}|${(device.match(/manufacturer:[^,>]*/) || [''])[0]}`
       : sourceName;
-    let lbl = labelCache.get(key);
-    if (lbl === undefined) {
-      lbl = detach(sourceLabel(sourceName, device));
-      labelCache.set(detach(key), lbl);
+    let id = sourceIds.get(key);
+    if (id === undefined) {
+      id = sourceMeta.length;
+      sourceMeta.push({ name: detach(sourceName), device: detach(device) });
+      sourceIds.set(detach(key), id);
     }
-    return lbl;
+    return id;
   };
 
   const onRecord = (tag) => {
@@ -300,7 +335,7 @@ export default async function parseAppleHealthFile(file, onProgress) {
       'Avg HR (bpm)': fmtNum(w.avgHr, 0),
       'Max HR (bpm)': fmtNum(w.maxHr, 0),
       Indoor: w.indoor,
-      Source: w.source,
+      Source: publicLabel(w.source),
       _timestamp: w.start.ms,
       _app: activity,
     });
@@ -366,6 +401,13 @@ export default async function parseAppleHealthFile(file, onProgress) {
       await streamBlobText(file, (t) => scanner.push(t), onProgress);
     }
     scanner.end();
+    if (scanner.malformed > 0) {
+      parsingErrors.tablesNotParsed.push({
+        sheetName: 'Apple Health Export',
+        reason: `${scanner.malformed} malformed section(s) of export.xml were skipped.`,
+        expectedFormat: 'XML',
+      });
+    }
   } catch (error) {
     parsingErrors.tablesNotParsed.push({
       sheetName: 'Apple Health Export',
@@ -416,7 +458,7 @@ export default async function parseAppleHealthFile(file, onProgress) {
       'Respiratory Rate (brpm)': fmtNum(mean('resp'), 1),
       'SpO2 (%)': fmtNum(mean('spo2'), 1),
       VO2max: fmtNum(mean('vo2max'), 1),
-      'Steps Source': steps.source,
+      'Steps Source': publicLabel(steps.source),
     };
     if (Object.entries(row).every(([k, v]) => k === 'Date' || v === '')) continue;
     row._timestamp = dayTimestamp(date);
@@ -466,7 +508,7 @@ export default async function parseAppleHealthFile(file, onProgress) {
       'REM (min)': staged ? fmtNum(best.rem, 0) : '',
       'Awake (min)': staged || best.awake > 0 ? fmtNum(best.awake, 0) : '',
       'Unstaged Asleep (min)': best.unspecified > 0 ? fmtNum(best.unspecified, 0) : '',
-      Source: bestLabel,
+      Source: publicLabel(bestLabel),
       'Sources Recorded': String(bySource.size),
       _timestamp: dayTimestamp(date),
     });

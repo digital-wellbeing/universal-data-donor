@@ -96,3 +96,63 @@ export function forEachCsvRecord(text, onRecord, opts = {}) {
     return onRecord(rec, header);
   }, opts.delimiter);
 }
+
+/**
+ * Push-based variant of forEachCsvRecord for files too large to hold as one
+ * string (multi-year heart-rate CSVs can exceed V8's maximum string length).
+ * Text is cut at the last line break outside quotes and parsed segment by
+ * segment, so memory stays proportional to one chunk.
+ *
+ * `opts.detect(line1, line2)` may inspect the first two lines and return
+ * `{skipLines, delimiter}` (e.g. Samsung's metadata line / ';' re-saves).
+ *
+ * @param {(row: Object, header: string[]) => void} onRecord
+ * @param {{skipLines?: number, delimiter?: string, detect?: Function}} [opts]
+ * @returns {{push: (text: string) => void, end: () => void}}
+ */
+export function createCsvRecordStream(onRecord, opts = {}) {
+  let carry = '';
+  let header = null;
+  let skip = opts.skipLines || 0;
+  let delimiter = opts.delimiter || ',';
+  let detected = !opts.detect;
+
+  const detect = (force) => {
+    const lines = carry.replace(/^﻿/, '').split(/\r\n|\n|\r/, 3);
+    if (lines.length < 3 && !force) return;
+    const r = opts.detect(lines[0] || '', lines[1] || '') || {};
+    skip = r.skipLines || 0;
+    delimiter = r.delimiter || ',';
+    detected = true;
+  };
+
+  const parse = (segment) => forEachCsvRow(segment, (fields) => {
+    if (skip > 0) { skip -= 1; return; }
+    if (!header) { header = fields.map((h) => h.trim()); return; }
+    const rec = {};
+    for (let k = 0; k < header.length; k++) rec[header[k]] = k < fields.length ? fields[k] : '';
+    onRecord(rec, header);
+  }, delimiter);
+
+  return {
+    push(text) {
+      carry += text;
+      if (!detected) detect(false);
+      if (!detected) return;
+      const cut = Math.max(carry.lastIndexOf('\n'), carry.lastIndexOf('\r'));
+      if (cut === -1) return;
+      // Only cut where the quote count is even (not inside a quoted field),
+      // unless the carried text grows unreasonably large.
+      let quotes = 0;
+      for (let q = carry.indexOf('"'); q !== -1 && q < cut; q = carry.indexOf('"', q + 1)) quotes++;
+      if (quotes % 2 === 1 && carry.length < 64 * 1024 * 1024) return;
+      parse(carry.slice(0, cut + 1));
+      carry = carry.slice(cut + 1);
+    },
+    end() {
+      if (!detected) detect(true);
+      if (carry) parse(carry);
+      carry = '';
+    },
+  };
+}

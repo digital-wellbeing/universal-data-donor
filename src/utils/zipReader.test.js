@@ -52,6 +52,20 @@ describe('zipReader', () => {
     expect(xml).toHaveLength(12 + 9 * 1000 + 13);
   });
 
+  test('error messages never contain entry names (they can hold account names)', async () => {
+    const zip = new JSZip();
+    zip.file('samsunghealth_jane.doe_20240101/data.csv', 'x'.repeat(100));
+    const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+    // Patch the compression method to 9 (Deflate64) in the central directory.
+    const view = new DataView(bytes.buffer);
+    for (let i = bytes.length - 22; i >= 0; i--) {
+      if (view.getUint32(i, true) === 0x02014b50) { view.setUint16(i + 10, 9, true); break; }
+    }
+    const z = await openZip(new Blob([bytes]));
+    await expect(z.readText(z.entries[0])).rejects.toThrow(/unsupported compression method \(9\)/);
+    await z.readText(z.entries[0]).catch((e) => expect(e.message).not.toMatch(/jane/));
+  });
+
   test('rejects non-zip input', async () => {
     await expect(openZip(new Blob(['not a zip at all']))).rejects.toThrow(/Not a ZIP/);
   });

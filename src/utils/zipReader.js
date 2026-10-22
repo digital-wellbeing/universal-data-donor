@@ -113,13 +113,16 @@ const readEndOfCentralDirectory = async (blob) => {
  * @returns {Promise<Object[]>}
  */
 const readCentralDirectory = async (blob) => {
-  const { count, cdOffset, cdSize } = await readEndOfCentralDirectory(blob);
+  const { cdOffset, cdSize } = await readEndOfCentralDirectory(blob);
   const cd = await readSlice(blob, cdOffset, cdOffset + cdSize);
   const view = new DataView(cd.buffer, cd.byteOffset, cd.byteLength);
 
+  // Walk the whole directory while the signature matches rather than trusting
+  // the entry count: archives with more than 65535 entries written without
+  // ZIP64 have a wrapped 16-bit count.
   const entries = [];
   let p = 0;
-  for (let n = 0; n < count && p + 46 <= cd.length; n++) {
+  while (p + 46 <= cd.length) {
     if (view.getUint32(p, true) !== SIG_CENTRAL) break;
     const flags = view.getUint16(p + 8, true);
     const method = view.getUint16(p + 10, true);
@@ -171,7 +174,8 @@ const dataOffset = async (blob, entry) => {
   const head = await readSlice(blob, entry.localOffset, entry.localOffset + 30);
   const view = new DataView(head.buffer, head.byteOffset, head.byteLength);
   if (view.getUint32(0, true) !== SIG_LOCAL) {
-    throw new Error(`Corrupt ZIP: bad local header for ${entry.name}`);
+    // Entry names can contain account names; never put them in messages.
+    throw new Error('Corrupt ZIP: bad local file header');
   }
   return entry.localOffset + 30 + view.getUint16(26, true) + view.getUint16(28, true);
 };
@@ -191,9 +195,9 @@ export async function openZip(blob) {
    * @param {(fraction: number) => void} [onProgress]
    */
   const stream = async (entry, onData, onProgress) => {
-    if (entry.encrypted) throw new Error(`${entry.name} is encrypted`);
+    if (entry.encrypted) throw new Error('A file in the ZIP is password-protected');
     if (entry.method !== 0 && entry.method !== 8) {
-      throw new Error(`${entry.name} uses unsupported compression method ${entry.method}`);
+      throw new Error(`A file in the ZIP uses an unsupported compression method (${entry.method}); please re-create the ZIP with standard compression`);
     }
     const start = await dataOffset(blob, entry);
     const end = start + entry.compressedSize;
@@ -216,15 +220,24 @@ export async function openZip(blob) {
     }
   };
 
-  const readBytes = async (entry) => {
-    const parts = [];
-    let total = 0;
-    await stream(entry, (c) => { parts.push(c); total += c.length; });
-    if (parts.length === 1) return parts[0];
-    const out = new Uint8Array(total);
+  /**
+   * Read a whole entry. The output buffer is pre-allocated from the declared
+   * size, so peak memory is ~1x the entry rather than chunks + copy.
+   */
+  const readBytes = async (entry, onProgress) => {
+    let out = new Uint8Array(entry.size > 0 ? entry.size : 0);
     let off = 0;
-    for (const c of parts) { out.set(c, off); off += c.length; }
-    return out;
+    await stream(entry, (c) => {
+      if (off + c.length > out.length) {
+        // Declared size was wrong: grow geometrically.
+        const bigger = new Uint8Array(Math.max(out.length * 2, off + c.length));
+        bigger.set(out.subarray(0, off));
+        out = bigger;
+      }
+      out.set(c, off);
+      off += c.length;
+    }, onProgress);
+    return off === out.length ? out : out.subarray(0, off);
   };
 
   const readText = async (entry) => utf8.decode(await readBytes(entry));

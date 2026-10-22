@@ -67,8 +67,8 @@ describe('openDatabase', () => {
     const db = openDatabase(loadFixture());
     expect(Array.from(db.rows('quoted name'))).toEqual([{ 'a b': 'hello', c: 0 }]);
     expect(Array.from(db.rows('later'))).toEqual([
-      { id: 1, v: 'before alter', gen: null, extra: null },
-      { id: 2, v: 'after alter', gen: null, extra: 'x' }, // virtual column not stored
+      { id: 1, v: 'before alter', gen: null, extra: null, flag: 42, label: "it's" },
+      { id: 2, v: 'after alter', gen: null, extra: 'x', flag: 42, label: "it's" }, // virtual column not stored
     ]);
   });
 });

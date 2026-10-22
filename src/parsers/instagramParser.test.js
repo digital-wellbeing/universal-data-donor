@@ -141,6 +141,16 @@ describe('parseInstagramFile', () => {
     expect(totals).toEqual({ 'Messages Sent': '2', 'Messages Received': '1' });
   });
 
+  test('out-of-range timestamps are skipped instead of throwing', async () => {
+    const res = await parseInstagramFile(await exportZip({
+      'your_instagram_activity/likes/liked_posts.json': { likes_media_likes: [
+        { string_list_data: [{ timestamp: 1.7e13 }] }, // ms in a seconds field
+        { string_list_data: [{ timestamp: 1767000000 }] },
+      ] },
+    }));
+    expect(res.data['Activity Totals']).toEqual([expect.objectContaining({ Category: 'Posts Liked', Count: '1' })]);
+  });
+
   test('rejects HTML-format and unrelated exports', async () => {
     const res = await parseInstagramFile(await exportZip({ 'your_instagram_activity/likes/liked_posts.html': '<html></html>' }));
     expect(res.data).toEqual({});

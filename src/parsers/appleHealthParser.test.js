@@ -90,14 +90,17 @@ describe('parseAppleDate', () => {
 });
 
 describe('sourceLabel', () => {
-  test('reduces Apple devices to their model and strips owner names', () => {
+  test('allow-listed labels only; never the raw name', () => {
     expect(sourceLabel('Alex’s Apple Watch', '<<HKDevice: 0x1>, name:Apple Watch, manufacturer:Apple Inc., model:Watch, hardware:Watch6,1>'))
       .toBe('Apple Watch');
     expect(sourceLabel("Sam's iPhone", '')).toBe('iPhone');
     expect(sourceLabel('Strava', '')).toBe('Strava');
     expect(sourceLabel('Apple Watch von Test', '')).toBe('Apple Watch');
     expect(sourceLabel('iPhone de Marie', '')).toBe('iPhone');
-    expect(sourceLabel('Montre de Marie', '')).toBe('Montre');
+    expect(sourceLabel('Fitbit to Apple Health', '')).toBe('Fitbit');
+    for (const personal of ['Montre de Marie', 'Andrei Foldes', 'Phone of Andrei', 'Andreis Galaxy', 'Andrei’s']) {
+      expect(sourceLabel(personal, '')).toBeNull();
+    }
   });
 });
 
@@ -196,6 +199,36 @@ describe('parseAppleHealthFile', () => {
     zip.file('something.txt', 'hi');
     const res2 = await parseAppleHealthFile(new Blob([await zip.generateAsync({ type: 'uint8array' })]));
     expect(res2.parsingErrors.sheetsNotFound).toContain('export.xml');
+  });
+});
+
+describe('source handling', () => {
+  const PHONE_DEV = 'device="&lt;&lt;HKDevice: 0x1&gt;, name:iPhone, manufacturer:Apple Inc., model:iPhone, hardware:iPhone13,2&gt;"';
+  const x = (src, dev, value, type = 'HKQuantityTypeIdentifierStepCount') => `<Record type="${type}" sourceName="${src}" ${dev} unit="count" startDate="2024-02-01 08:00:00 +0000" endDate="2024-02-01 09:00:00 +0000" value="${value}"/>`;
+
+  test('apps sharing the iPhone device record are not summed with it', async () => {
+    const xml = `<HealthData>${x('Alex’s iPhone', PHONE_DEV, 5000)}${x('Withings', PHONE_DEV, 4800)}</HealthData>`;
+    const res = await parseAppleHealthFile(new Blob([xml]));
+    expect(res.data['Daily Activity'][0].Steps).toBe('5000');
+  });
+
+  test('user-named sources become "Other source N"', async () => {
+    const xml = `<HealthData>${x('Andrei Foldes', '', 7000)}${x('Phone of Andrei', '', 100)}`
+      + '<Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Phone of Andrei" startDate="2024-02-01 23:00:00 +0000" endDate="2024-02-02 06:00:00 +0000" value="HKCategoryValueSleepAnalysisInBed"/>'
+      + '</HealthData>';
+    const res = await parseAppleHealthFile(new Blob([xml]));
+    expect(res.data['Daily Activity'][0]['Steps Source']).toBe('Other source 1');
+    expect(res.data.Sleep[0].Source).toBe('Other source 2');
+    expect(JSON.stringify(res.data)).not.toMatch(/Andrei/);
+  });
+
+  test('a stray quote is skipped, not fatal', async () => {
+    const good = x('Strava', '', 10);
+    const bad = '<Record type="HKQuantityTypeIdentifierStepCount" sourceName="oops value="1"/>\n';
+    const filler = Array.from({ length: 12000 }, () => good).join('\n'); // > 1 MB
+    const res = await parseAppleHealthFile(new Blob([`<HealthData>${bad}${filler}${filler}</HealthData>`]));
+    expect(Number(res.data['Daily Activity'][0].Steps)).toBeGreaterThan(100000);
+    expect(res.parsingErrors.tablesNotParsed.some((e) => /malformed/.test(e.reason))).toBe(true);
   });
 });
 

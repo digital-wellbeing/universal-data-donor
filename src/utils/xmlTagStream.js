@@ -61,16 +61,30 @@ export const getAttr = (tag, name) => {
  */
 export function createTagScanner(onTag) {
   let buf = '';
+  let malformed = 0;
 
+  // A '>' inside a quoted attribute value does not close the tag. Hop from
+  // quote pair to quote pair so the search stays linear in the tag length.
   const findTagEnd = (from) => {
-    // A '>' inside a quoted attribute value does not close the tag.
-    let gt = buf.indexOf('>', from);
-    while (gt !== -1) {
-      let quotes = 0;
-      for (let q = buf.indexOf('"', from); q !== -1 && q < gt; q = buf.indexOf('"', q + 1)) quotes++;
-      if (quotes % 2 === 0) return gt;
-      gt = buf.indexOf('>', gt + 1);
+    let p = from;
+    for (;;) {
+      const gt = buf.indexOf('>', p);
+      if (gt === -1) return -1;
+      const q = buf.indexOf('"', p);
+      if (q === -1 || q > gt) return gt;
+      const q2 = buf.indexOf('"', q + 1);
+      if (q2 === -1) return -1;
+      p = q2 + 1;
     }
+  };
+
+  // An unterminated construct longer than this is malformed (no real tag,
+  // comment or declaration is this long): skip its '<' and resynchronise at
+  // the next one instead of buffering the rest of a multi-GB file.
+  const MAX_TAG = 1 << 20;
+  const incomplete = (lt) => {
+    if (buf.length - lt <= MAX_TAG) return lt;
+    malformed += 1;
     return -1;
   };
 
@@ -87,32 +101,32 @@ export function createTagScanner(onTag) {
       if (next === 33 /* ! */) {
         if (buf.startsWith('<!--', lt)) {
           end = buf.indexOf('-->', lt + 4);
-          if (end === -1) { i = lt; break; }
+          if (end === -1) { const r = incomplete(lt); if (r === -1) { i = lt + 1; continue; } i = r; break; }
           i = end + 3;
           continue;
         }
         if (buf.startsWith('<![CDATA[', lt)) {
           end = buf.indexOf(']]>', lt + 9);
-          if (end === -1) { i = lt; break; }
+          if (end === -1) { const r = incomplete(lt); if (r === -1) { i = lt + 1; continue; } i = r; break; }
           i = end + 3;
           continue;
         }
         // <!DOCTYPE ... [ and the <!ELEMENT>/<!ATTLIST> declarations inside it.
         end = findTagEnd(lt + 2);
-        if (end === -1) { i = lt; break; }
+        if (end === -1) { const r = incomplete(lt); if (r === -1) { i = lt + 1; continue; } i = r; break; }
         i = end + 1;
         continue;
       }
       if (next === 63 /* ? */) {
         end = buf.indexOf('?>', lt + 2);
-        if (end === -1) { i = lt; break; }
+        if (end === -1) { const r = incomplete(lt); if (r === -1) { i = lt + 1; continue; } i = r; break; }
         i = end + 2;
         continue;
       }
       if (Number.isNaN(next)) { i = lt; break; } // '<' is the last char
 
       end = findTagEnd(lt + 1);
-      if (end === -1) { i = lt; break; }
+      if (end === -1) { const r = incomplete(lt); if (r === -1) { i = lt + 1; continue; } i = r; break; }
 
       const tag = buf.slice(lt, end + 1);
       if (next === 47 /* / */) {
@@ -139,7 +153,10 @@ export function createTagScanner(onTag) {
     },
     end() {
       scan();
+      if (buf.indexOf('<') !== -1) malformed += 1; // truncated final tag
       buf = '';
     },
+    /** Number of malformed / truncated constructs skipped so far. */
+    get malformed() { return malformed; },
   };
 }
