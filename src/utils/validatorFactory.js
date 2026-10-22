@@ -6,6 +6,7 @@ const validatorImporters = {
   garminValidator: () => import('../validators/garminValidator.js'),
   appleHealthValidator: () => import('../validators/appleHealthValidator.js'),
   healthConnectValidator: () => import('../validators/healthConnectValidator.js'),
+  fitbitValidator: () => import('../validators/fitbitValidator.js'),
 };
 
 export const getValidator = async (validatorName) => {

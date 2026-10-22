@@ -52,12 +52,19 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       logo: '/healthconnect-logo.svg',
       description: 'Donate the health data your Android apps and wearables share',
       color: '#3B7A57'
+    },
+    {
+      id: 'fitbit',
+      name: 'Fitbit',
+      logo: '/fitbit-logo.svg',
+      description: 'Donate your Fitbit / Google Health data via Google Takeout',
+      color: '#008C94'
     }
   ];
 
   // Only these platforms are shown on the homepage. The others remain fully
   // functional via a direct ?platform=<id> URL — add an id here to re-enable it.
-  const ENABLED_PLATFORM_IDS = ['activitywatch', 'googlefit', 'garmin', 'applehealth', 'healthconnect'];
+  const ENABLED_PLATFORM_IDS = ['activitywatch', 'googlefit', 'garmin', 'applehealth', 'healthconnect', 'fitbit'];
   const visiblePlatforms = platforms.filter((p) => ENABLED_PLATFORM_IDS.includes(p.id));
 
   const handlePlatformClick = (platformId) => {
