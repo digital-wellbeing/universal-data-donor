@@ -1,0 +1,40 @@
+# Deploys the `production` branch to https://iemabot.surrey.ac.uk/datadonation/
+# through the Surrey VPS's self-hosted runner (deploy/host/install-runner.sh).
+#
+# Trigger: pushing to `production` (done by deploy/promote.sh, which adds a
+# commit signed with the owner's key), or re-run via "Run workflow".
+# Guards, outermost first:
+#   * `production` is push-restricted to the owner in branch protection, and
+#     the iemabot-production environment only accepts the production branch;
+#   * the job refuses any other ref, has no token permissions, checks nothing
+#     out and uses no third-party actions;
+#   * the runner can only call datadonation-deploy, which re-fetches the public
+#     repo itself and deploys only the current tip of `production` when that
+#     commit carries a valid signature from the owner's key (checked against a
+#     root-owned allowed-signers file on the host, not anything in the repo).
+name: Deploy to iemabot
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deploy-iemabot
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/production' && github.repository == 'digital-wellbeing/universal-data-donor'
+    runs-on: [datadonation-deploy]
+    environment:
+      name: iemabot-production
+      url: https://iemabot.surrey.ac.uk/datadonation/
+    timeout-minutes: 30
+    steps:
+      - name: Deploy production
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+        run: sudo -n -u tf0011 /usr/local/sbin/datadonation-deploy "$DEPLOY_SHA"

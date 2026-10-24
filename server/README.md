@@ -31,9 +31,13 @@ comma-separated allow-list checked against siteverify's `hostname`), `IP_SALT`,
 
 ## Deploy
 
-Handled by `../deploy-datadonation.sh` (run on the VPS as root): it builds/starts
-this container via `docker compose`, creates the data dir + env file, and adds the
-Caddy `/datadonation/submit` route.
+This service runs as the `datadonation-api` container next to the frontend's
+`datadonation-web` container, both defined in the repo-root `docker-compose.yml`.
+Its config lives in `server/datadonation-api.env` (gitignored; copy the example).
+See the root README's "Deployment" section: a signed push to `production`
+(`deploy/promote.sh`) makes the VPS's self-hosted runner run
+`../deploy-datadonation.sh`, which builds/starts both containers, creates the
+data dir + env file, and points Caddy at them.
 
 ## Inspect donations
 

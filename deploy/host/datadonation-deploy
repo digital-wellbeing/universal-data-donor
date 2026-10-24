@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# datadonation-deploy [<40-char commit sha>]
+#
+# The ONLY entry point the self-hosted GitHub runner may call (via a sudoers
+# rule that runs it as the deploy user, never as root). Installed root-owned at
+# /usr/local/sbin/datadonation-deploy by deploy/host/install-runner.sh, so
+# neither the runner nor the repo can change what it does.
+#
+# It never trusts the runner's workspace: it fetches the PUBLIC repo itself and
+# deploys a commit of the `production` branch only if that commit is signed by
+# a key in the root-owned allowed-signers file. GitHub permissions therefore
+# don't decide what runs here; the owner's signing key does. Called from the
+# runner, only the current tip of production is accepted; a human on the host
+# may roll back to any earlier signed production commit.
+set -euo pipefail
+umask 022
+
+REPO_URL="https://github.com/digital-wellbeing/universal-data-donor.git"
+BRANCH="production"
+DEPLOY_USER="@DEPLOY_USER@"     # substituted at install time
+APP_DIR="@APP_DIR@"             # substituted at install time
+ALLOWED_SIGNERS=/etc/datadonation/allowed_signers
+KEEP=/server/datadonation-api.env   # host-only secrets; never cleaned
+
+die() { echo "datadonation-deploy: $*" >&2; exit 1; }
+
+[ "$(id -un)" = "$DEPLOY_USER" ] || die "must run as $DEPLOY_USER"
+[ -s "$ALLOWED_SIGNERS" ] || die "$ALLOWED_SIGNERS is missing; re-run install-runner.sh"
+caller="${SUDO_USER:-$DEPLOY_USER}"
+want="${1:-}"
+if [ -n "$want" ] && ! [[ "$want" =~ ^[0-9a-f]{40}$ ]]; then
+  die "expected a full 40-character commit SHA"
+fi
+[ "$#" -le 1 ] || die "too many arguments"
+
+# Clean environment for everything below; the deploy script must not see the
+# runner's identity (it uses SUDO_USER to locate the owner's home).
+HOME="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
+export HOME PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+unset SUDO_USER SUDO_UID SUDO_GID SUDO_COMMAND GIT_DIR GIT_WORK_TREE GIT_CONFIG_GLOBAL
+export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
+
+mkdir -p "$APP_DIR"
+cd "$APP_DIR"
+[ -d .git ] || git init --quiet
+git config core.hooksPath /dev/null          # no repo-supplied hooks
+git remote remove origin 2>/dev/null || true
+git remote add origin "$REPO_URL"
+git fetch --quiet --no-tags --prune origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+tip="$(git rev-parse "refs/remotes/origin/$BRANCH")"
+
+target="${want:-$tip}"
+git cat-file -e "$target^{commit}" 2>/dev/null || die "commit $target not found on $REPO_URL"
+git merge-base --is-ancestor "$target" "refs/remotes/origin/$BRANCH" || die "$target is not on $BRANCH"
+if [ "$caller" != "$DEPLOY_USER" ] && [ "$target" != "$tip" ]; then
+  die "$target is not the current tip of $BRANCH ($tip); a newer push will deploy instead"
+fi
+
+# The decisive check: a valid SSH signature from an allowed key. Require the
+# "for <principal>" form: an unknown key still prints "Good ... signature
+# with ... key" followed by "No principal matched".
+if ! sig="$(git -c gpg.format=ssh -c gpg.ssh.allowedSignersFile="$ALLOWED_SIGNERS" \
+              verify-commit "$target" 2>&1)" || ! grep -q '^Good "git" signature for ' <<<"$sig"; then
+  echo "$sig" >&2
+  die "$target is not signed by an allowed key; refusing to deploy"
+fi
+echo "datadonation-deploy: $(grep '^Good "git" signature for ' <<<"$sig")"
+
+echo "datadonation-deploy: deploying $BRANCH@${target:0:12} (requested by $caller)"
+git checkout --quiet --force --detach "$target"
+git clean -ffdxq -e "$KEEP"
+git rev-parse --short=12 HEAD > REVISION
+
+exec bash "$APP_DIR/deploy-datadonation.sh"

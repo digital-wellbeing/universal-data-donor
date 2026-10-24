@@ -1,0 +1,20 @@
+# Keep the build context small and free of secrets / local data.
+.git
+.github
+.vscode
+.claude
+.gemini
+node_modules
+build
+coverage
+tests
+scripts
+**/__fixtures__
+**/*.test.js
+.env
+.env.*
+server/datadonation-api.env
+server/__pycache__
+**/*.sqlite
+**/*.db
+*.md

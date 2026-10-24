@@ -182,6 +182,61 @@ Tests cover the core functionality including data parsing and export features.
 Builds the app for production to the `build` folder.\
 The build is optimized and minified for deployment.
 
+## Deployment (containers)
+
+The platform runs as two containers defined in `docker-compose.yml`:
+
+| Container | What | Listens on |
+|---|---|---|
+| `datadonation-web` | the built SPA, served by an unprivileged Caddy (multi-stage `Dockerfile`) | `127.0.0.1:8084` |
+| `datadonation-api` | the Flask submission API (`server/`) | `127.0.0.1:8083` |
+
+Both run with a read-only root filesystem, `cap_drop: ALL` and `no-new-privileges`,
+and neither runs as root. The host's Caddy is the edge: it proxies `/datadonation/submit` to the API
+and `/datadonation/*` to the web container, and adds the security headers and IP
+allow-list from `deploy/harden-host.sh`.
+
+**Run locally:**
+
+```bash
+cp server/datadonation-api.env.example server/datadonation-api.env   # once; TEST Turnstile secret
+DATA_DIR=$PWD/.data docker compose up -d --build
+# web: http://127.0.0.1:8084  (paths are root-relative; the app expects /datadonation in front)
+```
+
+**Deploy to the VPS:** deploys are pulled from this public repo by a self-hosted
+GitHub Actions runner on the VPS (`.github/workflows/deploy-vps.yml`). `main` stays
+open for collaborators; what's live is the `production` branch, and only commits
+signed by the owner's SSH key get deployed:
+
+```bash
+deploy/promote.sh              # promote origin/main to production (signed) and push
+deploy/promote.sh <commit>     # promote, or roll back to, a specific main commit
+```
+
+The push triggers the workflow on the runner. The runner can do exactly one thing: run
+`/usr/local/sbin/datadonation-deploy` as the deploy user. That root-owned wrapper:
+- fetches the repo from GitHub itself;
+- checks that the commit is the current tip of `production`;
+- verifies its signature against `/etc/datadonation/allowed_signers`, a root-owned file on the host;
+- checks the commit out and runs `deploy-datadonation.sh`, which builds both images, swaps the containers and waits until they're healthy.
+
+So changes to GitHub permissions alone cannot put code on the server. The host
+keeps its secrets in `server/datadonation-api.env` inside the checkout, which
+deploys never touch.
+
+| Who / what | Can do |
+|---|---|
+| Collaborators | merge to `main` as usual; cannot deploy |
+| You (signing key holder) | `deploy/promote.sh` → signed push to `production` → deploy |
+| Runner (`ghrunner`, unprivileged) | `sudo -u <deploy user> datadonation-deploy <sha>`, nothing else |
+| Repo code | runs as the deploy user in containers; cannot edit Caddy (root-only, manual) |
+
+One-time host setup: `sudo bash deploy/host/install-runner.sh` (runner user,
+wrapper, allowed signer, systemd hardening), then `sudo bash deploy-datadonation.sh`
+once to point Caddy at the containers. Manual deploy or rollback on the host:
+`sudo -u tf0011 /usr/local/sbin/datadonation-deploy [<sha>]`.
+
 ## Development Notes
 
 ### Recent Updates
