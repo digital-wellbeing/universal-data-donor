@@ -1,0 +1,4 @@
+# Custom label of the self-hosted deploy runner (deploy/host/install-runner.sh).
+self-hosted-runner:
+  labels:
+    - datadonation-deploy

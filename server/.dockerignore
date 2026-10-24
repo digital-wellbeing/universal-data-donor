@@ -1,0 +1,7 @@
+# The image only COPYs app.py, donation_crypto.py and requirements.txt; keep
+# secrets and local data out of the build context entirely.
+datadonation-api.env
+*.env
+__pycache__
+*.sqlite
+*.db

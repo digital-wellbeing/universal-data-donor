@@ -1,0 +1,29 @@
+# Static file server inside the datadonation-web container. The host Caddy
+# strips the /datadonation prefix before proxying, so paths here are root-relative.
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:8080 {
+	root * /srv
+
+	# Content-hashed bundles never change: cache for a year, and never fall
+	# back to index.html (a missing chunk must 404, not return HTML).
+	# Only existing files get the long cache, so a 404 seen mid-deploy is not
+	# pinned in browsers for a year.
+	handle /static/* {
+		@exists file
+		header @exists Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Everything else (index.html, config-*.json, logos) revalidates so a
+	# redeploy is picked up immediately. Unknown paths get the SPA shell.
+	handle {
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

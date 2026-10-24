@@ -24,18 +24,6 @@
   font-weight: 300;
 }
 
-.platform-selector-tip {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.platform-selector-tip code {
-  color: white;
-  background: rgba(0, 0, 0, 0.18);
-  padding: 0.1em 0.35em;
-  border-radius: 0.25rem;
-  white-space: nowrap;
-}
-
 /* ---- Layout ----
    One outer grid of --cols equal columns (3 / 2 / 1 by viewport). Each
    category section spans as many columns as it has cards (data-count is
