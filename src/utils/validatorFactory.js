@@ -4,6 +4,11 @@ const validatorImporters = {
   activitywatchValidator: () => import('../validators/activitywatchValidator.js'),
   googlefitValidator: () => import('../validators/googlefitValidator.js'),
   garminValidator: () => import('../validators/garminValidator.js'),
+  appleHealthValidator: () => import('../validators/appleHealthValidator.js'),
+  healthConnectValidator: () => import('../validators/healthConnectValidator.js'),
+  fitbitValidator: () => import('../validators/fitbitValidator.js'),
+  samsungHealthValidator: () => import('../validators/samsungHealthValidator.js'),
+  instagramValidator: () => import('../validators/instagramValidator.js'),
 };
 
 export const getValidator = async (validatorName) => {

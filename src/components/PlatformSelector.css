@@ -24,66 +24,186 @@
   font-weight: 300;
 }
 
+.platform-selector-tip {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.platform-selector-tip code {
+  color: white;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+}
+
+/* ---- Layout ----
+   One outer grid of --cols equal columns (3 / 2 / 1 by viewport). Each
+   category section spans as many columns as it has cards (data-count is
+   capped at 3), so small categories share a row instead of each leaving a
+   mostly empty one. Inside a section the card list adopts the outer
+   columns through subgrid, so every card on the page sits on the same
+   column lines. Cards then span 4 rows (logo / name / description / CTA)
+   with subgrid rows, so those parts line up across a row even when one
+   description wraps to more lines than its neighbours. */
+.platform-groups {
+  --cols: 3;
+  --gap: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  row-gap: 2.25rem;
+}
+
+.platform-group {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-template-rows: auto;
+  align-content: start;
+}
+
+.platform-group[data-count="1"] { grid-column: span 1; }
+.platform-group[data-count="2"] { grid-column: span 2; }
+
+.platform-group-title {
+  grid-column: 1 / -1;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.platform-grid {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: subgrid;
+  column-gap: var(--gap);
+  row-gap: 0;
+}
+
+/* No subgrid (older browsers): each section lays out its own equal columns. */
+@supports not (grid-template-columns: subgrid) {
+  .platform-group,
+  .platform-grid {
+    grid-template-columns: repeat(var(--span, var(--cols)), minmax(0, 1fr));
+  }
+  .platform-group[data-count="1"] { --span: 1; }
+  .platform-group[data-count="2"] { --span: 2; }
+}
+
+@media (max-width: 959px) {
+  .platform-groups { --cols: 2; }
+  .platform-group[data-count="2"],
+  .platform-group[data-count="3"] { grid-column: 1 / -1; }
+}
+
+.platform-grid-item {
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  margin-bottom: 1.25rem;
+}
+
 .platform-card {
-  transition: all 0.3s ease;
-  border-width: 3px;
+  grid-row: span 4;
+  display: grid;
+  grid-template-rows: subgrid;
+  justify-items: center;
+  align-items: start;
+  row-gap: 0.75rem;
+  width: 100%;
+  padding: 1.75rem 1.5rem 1.5rem;
+  border: 3px solid var(--platform-color);
   border-radius: 1rem;
   background: white;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  font: inherit;
+  text-align: center;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: fadeIn 0.5s ease-out both;
+}
+
+/* Browsers without subgrid: the card lays out its own four rows and the
+   description absorbs extra height, so the CTAs still sit at the bottom. */
+@supports not (grid-template-rows: subgrid) {
+  .platform-grid-item,
+  .platform-card {
+    grid-template-rows: auto auto 1fr auto;
+  }
 }
 
 .platform-card:hover {
-  transform: translateY(-10px);
+  transform: translateY(-6px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
+.platform-card:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+.platform-card:active {
+  transform: translateY(-2px);
+}
+
 .platform-logo-container {
-  width: 120px;
-  height: 120px;
+  width: 88px;
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #f8f9fa;
   border-radius: 50%;
-  padding: 1.5rem;
+  padding: 1.1rem;
 }
 
 .platform-logo {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
 }
 
 .platform-name {
-  font-size: 1.75rem;
+  font-size: 1.4rem;
   font-weight: 600;
-  margin: 0;
+  line-height: 1.2;
+  color: var(--platform-color);
 }
 
 .platform-description {
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  /* Reserve two lines so cards in different sections still match height. */
+  min-height: 3em;
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .platform-select-btn {
-  transition: all 0.2s ease;
-  font-weight: 600;
-  padding: 0.75rem 2rem;
-  border-radius: 0.5rem;
+  align-self: end;
   width: 100%;
+  padding: 0.6rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--platform-color);
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-.platform-select-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.platform-select-btn:active {
-  transform: scale(0.98);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
+/* Phones: one column of compact horizontal cards. The card becomes its own
+   two-column grid (logo | text) and drops the subgrid rows, which only pay
+   off when several cards share a row. */
+@media (max-width: 599px) {
   .platform-selector-title {
     font-size: 2rem;
   }
@@ -92,21 +212,54 @@
     font-size: 1rem;
   }
 
-  .platform-logo-container {
-    width: 100px;
-    height: 100px;
-  }
+  .platform-groups { --cols: 1; row-gap: 1.75rem; }
+  .platform-group[data-count] { grid-column: 1 / -1; }
 
-  .platform-name {
-    font-size: 1.5rem;
+  .platform-grid-item {
+    grid-row: auto;
+    grid-template-rows: none;
+    margin-bottom: 0.875rem;
   }
 
   .platform-card {
-    margin-bottom: 1rem;
+    grid-row: auto;
+    grid-template-columns: 56px 1fr;
+    grid-template-rows: none;
+    grid-template-areas:
+      "logo name"
+      "logo desc";
+    justify-items: start;
+    align-items: center;
+    column-gap: 1rem;
+    row-gap: 0.15rem;
+    padding: 1rem;
+    text-align: left;
+  }
+
+  .platform-logo-container {
+    grid-area: logo;
+    width: 56px;
+    height: 56px;
+    padding: 0.7rem;
+  }
+
+  .platform-name {
+    grid-area: name;
+    font-size: 1.15rem;
+  }
+
+  .platform-description {
+    grid-area: desc;
+    font-size: 0.875rem;
+    min-height: 0;
+  }
+
+  /* The whole card is the tap target; the CTA label is redundant here. */
+  .platform-select-btn {
+    display: none;
   }
 }
 
-/* Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -118,10 +271,14 @@
   }
 }
 
-.platform-card {
-  animation: fadeIn 0.5s ease-out;
-}
+@media (prefers-reduced-motion: reduce) {
+  .platform-card {
+    animation: none;
+    transition: none;
+  }
 
-.platform-card:nth-child(2) {
-  animation-delay: 0.1s;
+  .platform-card:hover,
+  .platform-card:active {
+    transform: none;
+  }
 }

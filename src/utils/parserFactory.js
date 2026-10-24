@@ -4,6 +4,11 @@ const parserImporters = {
   activitywatchParser: () => import('../parsers/activitywatchParser.js'),
   googlefitParser: () => import('../parsers/googlefitParser.js'),
   garminParser: () => import('../parsers/garminParser.js'),
+  appleHealthParser: () => import('../parsers/appleHealthParser.js'),
+  healthConnectParser: () => import('../parsers/healthConnectParser.js'),
+  fitbitParser: () => import('../parsers/fitbitParser.js'),
+  samsungHealthParser: () => import('../parsers/samsungHealthParser.js'),
+  instagramParser: () => import('../parsers/instagramParser.js'),
 };
 
 export const getParser = async (parserName) => {
