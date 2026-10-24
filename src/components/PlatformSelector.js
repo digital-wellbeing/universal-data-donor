@@ -159,19 +159,6 @@ const PlatformSelector = ({ onSelectPlatform }) => {
             );
           })}
         </div>
-
-        <Box sx={{ textAlign: 'center', mt: 5 }}>
-          <Typography variant="body2" className="platform-selector-tip">
-            <strong>Tip:</strong> You can also access a specific platform directly using URL parameters:
-            <br />
-            {ENABLED_PLATFORM_IDS.map((id, i) => (
-              <React.Fragment key={id}>
-                {i > 0 && ' '}
-                <code>?platform={id}</code>
-              </React.Fragment>
-            ))}
-          </Typography>
-        </Box>
       </Container>
     </Box>
   );
