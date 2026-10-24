@@ -29,3 +29,6 @@ yarn-error.log*
 __pycache__/
 *.py[cod]
 server/datadonation-api.env
+
+# Local docker compose data dir (DATA_DIR=$PWD/.data)
+/.data

@@ -3,25 +3,26 @@ set -euo pipefail
 
 # Harden the Universal Data Donor host. Run as root on surrey-vps:
 #
-#     sudo bash ~/harden-datadonation.sh
+#     sudo bash ~/datadonation/deploy/harden-host.sh   (or the ~/harden-datadonation.sh wrapper)
 #
 # Idempotent. Order matters: the new frontend (which sends the Turnstile token as
 # a header) is published BEFORE the new API (which only accepts the header).
 #   1. Backs up the donations DB (root-only, 0700 dir).
 #   2. Locks down permissions: env file 0600, data dir 0700 owned by the
 #      container's unprivileged uid (10001).
-#   3. Publishes frontend + rebuilds the API (non-root, read-only container).
+#   3. Rebuilds + restarts the web and API containers (non-root, read-only).
 #   4. Adds security headers (CSP, HSTS, nosniff, ...) to the /datadonation
 #      Caddy routes only, validates, reloads. ESMira routes are untouched.
 #   5. Prints the proxy addresses Caddy sees, to set XFF_TRUSTED_HOPS correctly.
 
 OWNER="${SUDO_USER:-tf0011}"
-API_DIR="${API_DIR:-/home/$OWNER/datadonation-api}"
+# The synced source tree (deploy/sync-to-host.sh -> ~/datadonation); this script lives in its deploy/ dir.
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_DIR=/srv/datadonation-data
 BACKUP_DIR=/srv/datadonation-backups
 CADDYFILE=/etc/caddy/Caddyfile
 STAMP="$(date +%Y%m%d-%H%M%S)"
-ENV_FILE="$API_DIR/datadonation-api.env"
+ENV_FILE="$APP_DIR/server/datadonation-api.env"
 CSP="default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
 echo "=== [1/5] Backing up donations DB ==="
@@ -38,6 +39,7 @@ PY
 fi
 
 echo "=== [2/5] Locking down permissions ==="
+[ -f "$ENV_FILE" ] || { echo "ABORT: $ENV_FILE not found; run 'sudo bash $APP_DIR/deploy-datadonation.sh' first." >&2; exit 1; }
 chown "$OWNER:$OWNER" "$ENV_FILE"
 chmod 0600 "$ENV_FILE"
 grep -q '^XFF_TRUSTED_HOPS=' "$ENV_FILE" || echo 'XFF_TRUSTED_HOPS=0' >> "$ENV_FILE"
@@ -46,8 +48,8 @@ chmod 0700 "$DATA_DIR"
 chmod 0600 "$DATA_DIR"/donations.sqlite* 2>/dev/null || true
 ls -ld "$DATA_DIR" "$ENV_FILE"
 
-echo "=== [3/5] Publishing frontend and rebuilding API ==="
-bash "/home/$OWNER/deploy-datadonation.sh"
+echo "=== [3/5] Rebuilding the web + API containers ==="
+bash "$APP_DIR/deploy-datadonation.sh"
 
 echo "=== [4/5] Security headers in Caddy ==="
 if grep -q '(ddsec)' "$CADDYFILE"; then
