@@ -18,7 +18,7 @@ export const ConfigProvider = ({ children }) => {
       setLoading(true);
 
       // Validate platform to prevent directory traversal
-      const validPlatforms = ['playstation', 'android', 'activitywatch', 'googlefit', 'garmin'];
+      const validPlatforms = ['playstation', 'android', 'activitywatch', 'googlefit', 'garmin', 'applehealth', 'healthconnect', 'fitbit', 'samsunghealth', 'instagram'];
       const safePlatform = validPlatforms.includes(platform) ? platform : 'playstation';
 
       const response = await fetch(`${process.env.PUBLIC_URL}/config-${safePlatform}.json`);
