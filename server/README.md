@@ -34,9 +34,10 @@ comma-separated allow-list checked against siteverify's `hostname`), `IP_SALT`,
 This service runs as the `datadonation-api` container next to the frontend's
 `datadonation-web` container, both defined in the repo-root `docker-compose.yml`.
 Its config lives in `server/datadonation-api.env` (gitignored; copy the example).
-See the root README's "Deployment" section: `deploy/sync-to-host.sh` ships the
-tree and runs `../deploy-datadonation.sh`, which builds/starts both containers,
-creates the data dir + env file, and points Caddy at them.
+See the root README's "Deployment" section: a signed push to `production`
+(`deploy/promote.sh`) makes the VPS's self-hosted runner run
+`../deploy-datadonation.sh`, which builds/starts both containers, creates the
+data dir + env file, and points Caddy at them.
 
 ## Inspect donations
 

@@ -16,7 +16,7 @@ set -euo pipefail
 #   5. Prints the proxy addresses Caddy sees, to set XFF_TRUSTED_HOPS correctly.
 
 OWNER="${SUDO_USER:-tf0011}"
-# The synced source tree (deploy/sync-to-host.sh -> ~/datadonation); this script lives in its deploy/ dir.
+# The deployed checkout (~/datadonation, kept up to date by datadonation-deploy); this script lives in its deploy/ dir.
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_DIR=/srv/datadonation-data
 BACKUP_DIR=/srv/datadonation-backups
