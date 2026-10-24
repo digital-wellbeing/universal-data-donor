@@ -4,10 +4,10 @@ set -euo pipefail
 # Deploy the Universal Data Donor as two containers (docker-compose.yml):
 #   datadonation-web  static React SPA  -> 127.0.0.1:8084
 #   datadonation-api  submission API    -> 127.0.0.1:8083
-# and point the system Caddy at them. Run on surrey-vps from the synced source
-# tree (deploy/sync-to-host.sh puts it in ~/datadonation):
+# and point the system Caddy at them. Runs on surrey-vps from the checkout in
+# ~/datadonation, normally via /usr/local/sbin/datadonation-deploy (which the
+# self-hosted runner calls after a signed push to `production`):
 #
-#     bash ~/datadonation/deploy-datadonation.sh          # routine redeploy
 #     sudo bash ~/datadonation/deploy-datadonation.sh     # first run / Caddy change
 #
 # Routine redeploys need no root: the tf0011 account runs docker. Root is only
