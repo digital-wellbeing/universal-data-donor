@@ -182,6 +182,41 @@ Tests cover the core functionality including data parsing and export features.
 Builds the app for production to the `build` folder.\
 The build is optimized and minified for deployment.
 
+## Deployment (containers)
+
+The platform runs as two containers defined in `docker-compose.yml`:
+
+| Container | What | Listens on |
+|---|---|---|
+| `datadonation-web` | the built SPA, served by an unprivileged Caddy (multi-stage `Dockerfile`) | `127.0.0.1:8084` |
+| `datadonation-api` | the Flask submission API (`server/`) | `127.0.0.1:8083` |
+
+Both run with a read-only root filesystem, `cap_drop: ALL` and `no-new-privileges`,
+and neither runs as root. The host's Caddy is the edge: it proxies `/datadonation/submit` to the API
+and `/datadonation/*` to the web container, and adds the security headers and IP
+allow-list from `deploy/harden-host.sh`.
+
+**Run locally:**
+
+```bash
+cp server/datadonation-api.env.example server/datadonation-api.env   # once; TEST Turnstile secret
+DATA_DIR=$PWD/.data docker compose up -d --build
+# web: http://127.0.0.1:8084  (paths are root-relative; the app expects /datadonation in front)
+```
+
+**Deploy to the VPS:** commit, then from your machine:
+
+```bash
+deploy/sync-to-host.sh            # default ssh host: iema-ts
+```
+
+This ships `HEAD` (via `git archive`) to `~/datadonation` on the host and runs
+`deploy-datadonation.sh` there. That script builds both images, swaps the
+containers, and checks that they're healthy. It needs no sudo. Root is only needed the first time,
+to create the data dir and point Caddy at the containers; the script prints the
+`sudo` command when that's required. The host keeps its secrets in
+`~/datadonation/server/datadonation-api.env`, which the sync never touches.
+
 ## Development Notes
 
 ### Recent Updates

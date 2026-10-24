@@ -1,0 +1,50 @@
+# The whole data-donation platform: static frontend + submission API.
+# Both bind to localhost only; the host's Caddy reverse-proxies
+#   /datadonation/submit -> datadonation-api  (127.0.0.1:8083)
+#   /datadonation/*      -> datadonation-web  (127.0.0.1:8084, prefix stripped)
+# and adds the security headers / IP allow-list (deploy/harden-host.sh).
+#
+#   cp server/datadonation-api.env.example server/datadonation-api.env  # once
+#   docker compose up -d --build
+name: datadonation
+
+x-hardening: &hardening
+  restart: unless-stopped
+  # Least privilege: read-only root fs, no extra capabilities, no setuid.
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  datadonation-web:
+    <<: *hardening
+    build: .
+    image: datadonation-web:latest
+    container_name: datadonation-web
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8084}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  datadonation-api:
+    <<: *hardening
+    build: ./server
+    image: datadonation-api:latest
+    container_name: datadonation-api
+    ports:
+      - "127.0.0.1:${API_PORT:-8083}:8083"
+    # SQLite donations DB persists here on the host (owned by uid 10001).
+    volumes:
+      - ${DATA_DIR:-/srv/datadonation-data}:/data
+    env_file:
+      - server/datadonation-api.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/datadonation/submit', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
