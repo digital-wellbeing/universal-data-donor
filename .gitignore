@@ -32,3 +32,9 @@ server/datadonation-api.env
 
 # Local docker compose data dir (DATA_DIR=$PWD/.data)
 /.data
+
+# Real personal-data exports kept locally for manual testing: never commit them.
+# Automated tests build synthetic fixtures instead (see src/parsers/__fixtures__).
+/tests/takeout-*
+/tests/*.xlsx
+/tests/*.zip

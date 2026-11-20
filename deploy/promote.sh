@@ -25,8 +25,16 @@ cd "$(git rev-parse --show-toplevel)"
 signingkey="$(git config --get user.signingkey || true)"
 [ -n "$signingkey" ] || die "user.signingkey is not set (see the header of this script)."
 
-git fetch --quiet "$REMOTE" main
-git fetch --quiet "$REMOTE" production 2>/dev/null || true
+# Fetch into explicit remote-tracking refs. A plain `git fetch origin production`
+# only updates refs/remotes/origin/production when the clone's fetch refspec
+# covers it, and a single-branch clone (main only) never does: the ref then goes
+# stale after each promote, the next deploy commit is built on an old parent and
+# the push is rejected as a non-fast-forward. (See deploy/promote.test.sh.)
+git fetch --quiet "$REMOTE" "+refs/heads/main:refs/remotes/$REMOTE/main"
+if git ls-remote --exit-code --heads "$REMOTE" production >/dev/null 2>&1; then
+  git fetch --quiet "$REMOTE" "+refs/heads/production:refs/remotes/$REMOTE/production" \
+    || die "could not fetch $REMOTE/production"
+fi
 src="$(git rev-parse --verify --quiet "$SRC^{commit}")" || die "unknown commit: $SRC"
 git merge-base --is-ancestor "$src" "$REMOTE/main" || die "$SRC is not on $REMOTE/main"
 
@@ -56,5 +64,7 @@ git -c gpg.ssh.allowedSignersFile="$signers" verify-commit "$new" 2>&1 \
 
 echo "Promoting main@${src:0:12} -> production@${new:0:12} (signed)…"
 git push "$REMOTE" "$new:refs/heads/production"
+# A push does not update refs/remotes/$REMOTE/production when no fetch refspec maps it.
+git update-ref "refs/remotes/$REMOTE/production" "$new"
 echo "Pushed. The 'Deploy to iemabot' workflow is running now:"
 echo "  gh run watch --repo digital-wellbeing/universal-data-donor \$(gh run list --repo digital-wellbeing/universal-data-donor --workflow deploy-vps.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
