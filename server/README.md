@@ -19,7 +19,21 @@ limiting + a payload-size cap + shape validation.
 ```
 
 Responses: `200 {ok:true,id}` · `403 captcha_failed` · `429 rate_limited` ·
-`400 invalid_payload|invalid_json|unknown_platform`.
+`400 invalid_payload|invalid_json|unknown_platform` · `409 duplicate_submission` ·
+`503 server_busy|storage_low`.
+
+The payload is validated strictly (`validation.py`): a known platform, a 16-digit
+`submissionId` that has not been used before, only known top-level keys, at most
+50 tables / 1.5M rows / 60 columns, finite scalar cells, and, for `googlefit` and
+`googletakeout`, only that platform's table names. Row and table totals are
+counted by the server, never taken from the client's `metadata`. A rejected
+payload gets a generic `invalid_payload`; the reason is only logged.
+
+`GET /datadonation/submit` is the health check and also the disk alert: it returns
+`503 storage_low` (so the container turns unhealthy) when free space drops below
+`MIN_FREE_BYTES`.
+
+Tests: `uv run --with flask==3.0.3 --with pynacl==1.5.0 --with pytest python -m pytest server/tests`.
 
 ## Config (env, see `datadonation-api.env.example`)
 
@@ -27,7 +41,12 @@ Responses: `200 {ok:true,id}` · `403 captcha_failed` · `429 rate_limited` ·
 TEST secret), `TURNSTILE_ACTION` (optional; require siteverify's echoed action
 to equal it — the widget sends `donate`), `TURNSTILE_HOSTNAMES` (optional
 comma-separated allow-list checked against siteverify's `hostname`), `IP_SALT`,
-`RATE_MAX`, `RATE_WINDOW`, `MAX_BYTES`.
+`RATE_MAX`, `RATE_WINDOW`, `MAX_BYTES`, `MIN_FREE_BYTES`, `MAX_DB_BYTES`,
+`MAX_CONCURRENT_SUBMITS`, `XFF_TRUSTED_HOPS`.
+
+Behind a gateway the rate limit only works per client once Caddy trusts the
+gateway's `X-Forwarded-For` (`sudo bash deploy/host/trust-gateway-xff.sh`) and
+`XFF_TRUSTED_HOPS=1` is set; until then all participants share one bucket.
 
 ## Deploy
 
