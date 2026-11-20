@@ -1,5 +1,6 @@
 import { openZip } from '../utils/zipReader';
-import { parseRawStreams } from './googlefitRawStreams';
+import { windowCutoff } from '../utils/timeWindow';
+import { parseRawStreams, RAW_WINDOW_MONTHS } from './googlefitRawStreams';
 
 /**
  * Parser for Google Fit data from a Google Takeout export (.zip).
@@ -17,9 +18,13 @@ import { parseRawStreams } from './googlefitRawStreams';
  *
  *   3. "Raw ..." tables  — every sample of heart rate, steps, distance,
  *      calories, activity segments and sleep segments from
- *      `Takeout/Fit/All Data/*.json`, limited to the study window (the last 6
- *      months before upload). Streamed, never loaded whole; see
+ *      `Takeout/Fit/All Data/*.json`. Streamed, never loaded whole; see
  *      googlefitRawStreams.js.
+ *
+ * Study window: every table is limited to the last `windowMonths` months
+ * (default 6, 0 disables) before `now`. Rows older than that, or of unknown
+ * age, are removed here and counted in `metadata.window` (same shape as the
+ * googletakeout parser), so older data never reaches the review page.
  *
  * Location columns (latitude / longitude) in the daily CSVs are dropped as they
  * are identifying; location streams under `All Data/` and the GPS `.tcx`
@@ -28,7 +33,7 @@ import { parseRawStreams } from './googlefitRawStreams';
  * @param {File} file - Uploaded Google Takeout .zip
  * @param {(fraction: number) => void} [onProgress] - 0..1 progress of the raw-stream pass
  * @param {{now?: number, windowMonths?: number}} [options] - override the study window (tests)
- * @returns {Promise<{data: Object, parsingErrors: {sheetsNotFound: string[], tablesNotParsed: Object[]}}>}
+ * @returns {Promise<{data: Object, parsingErrors: {sheetsNotFound: string[], tablesNotParsed: Object[]}, metadata: {window: Object}}>}
  */
 
 const DAILY_DIR_RE = /(?:^|\/)Daily activity metrics\/([^/]+)\.csv$/i;
@@ -393,6 +398,7 @@ const mapWithConcurrency = async (items, limit, fn) => {
 };
 
 export default async function parseGoogleFitFile(file, onProgress, options = {}) {
+  const { now = Date.now(), windowMonths = RAW_WINDOW_MONTHS } = options;
   const data = {};
   const parsingErrors = {
     sheetsNotFound: [],
@@ -521,10 +527,14 @@ export default async function parseGoogleFitFile(file, onProgress, options = {})
     }
   }
 
-  // ---- Raw streams (All Data), study window only -------------------------
+  // ---- Raw streams (All Data) --------------------------------------------
+  const droppedRowCounts = {};
+  const undatedRowCounts = {};
   try {
-    const raw = await parseRawStreams(zip, { onProgress, ...options });
+    const raw = await parseRawStreams(zip, { onProgress, now, windowMonths });
     Object.assign(data, raw.tables);
+    Object.assign(droppedRowCounts, raw.dropped);
+    Object.assign(undatedRowCounts, raw.undated);
     parsingErrors.tablesNotParsed.push(...raw.notes);
     if (!raw.hasAllData) parsingErrors.sheetsNotFound.push('All Data');
   } catch (e) {
@@ -535,5 +545,37 @@ export default async function parseGoogleFitFile(file, onProgress, options = {})
     });
   }
 
-  return { data, parsingErrors };
+  // ---- Study window for the summary tables -------------------------------
+  // (Raw streams were already cut while streaming.) Rows of unknown age are
+  // removed too, so nothing older than the window can leave the browser.
+  const cutoff = windowCutoff(now, windowMonths);
+  const windowed = Number.isFinite(cutoff);
+  for (const name of ['Daily Activity', 'Activity Sessions']) {
+    if (!data[name] || !windowed) continue;
+    const kept = data[name].filter((row) => Number.isFinite(row._timestamp) && row._timestamp >= cutoff);
+    const dropped = data[name].length - kept.length;
+    const undated = data[name].filter((row) => !Number.isFinite(row._timestamp)).length;
+    if (dropped > 0) droppedRowCounts[name] = dropped;
+    if (undated > 0) undatedRowCounts[name] = undated;
+    if (kept.length > 0) data[name] = kept;
+    else delete data[name];
+  }
+
+  const totalDropped = Object.values(droppedRowCounts).reduce((sum, n) => sum + n, 0);
+  const cutoffDate = windowed ? new Date(cutoff).toISOString().slice(0, 10) : null;
+  const effectiveMonths = windowed ? Math.max(1, Math.round(windowMonths)) : null;
+  if (Object.keys(data).length === 0 && totalDropped > 0) {
+    parsingErrors.tablesNotParsed.push({
+      sheetName: 'Time window',
+      reason: `Found ${totalDropped} rows, but all are older than ${cutoffDate} (the last ${effectiveMonths} months), so none can be donated.`,
+    });
+  }
+
+  return {
+    data,
+    parsingErrors,
+    metadata: {
+      window: { months: effectiveMonths, cutoff: cutoffDate, droppedRowCounts, undatedRowCounts, totalDropped },
+    },
+  };
 }

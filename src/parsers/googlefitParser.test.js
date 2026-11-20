@@ -22,11 +22,21 @@ const buildZip = async (files) => {
   return new Blob([bytes]);
 };
 
-const DAILY = 'Date,Step count,Calories (kcal)\n2026-03-01,1000,2000\n';
+// One day inside the window, one before it (cutoff is 2026-01-01).
+const DAILY = 'Date,Step count,Calories (kcal)\n2025-06-01,500,1500\n2026-03-01,1000,2000\n';
+const session = (startIso, steps) => JSON.stringify({
+  fitnessActivity: 'running',
+  startTime: startIso,
+  endTime: startIso,
+  duration: '1800s',
+  aggregate: [{ metricName: 'com.google.step_count.delta', intValue: steps }],
+});
 const HR = 'com.google.heart_rate.bpm';
 
 const FILES = {
   'Takeout/Fit/Daily activity metrics/Daily activity metrics.csv': DAILY,
+  'Takeout/Fit/All Sessions/new.json': session('2026-03-02T09:00:00Z', 100),
+  'Takeout/Fit/All Sessions/old.json': session('2025-05-02T09:00:00Z', 900),
   // Merged heart rate: one sample before the window, two inside (out of order).
   [`Takeout/Fit/All Data/derived_${HR}_com.google.android.gms_merge_heart_rate_bpm.json`]: stream(
     `derived:${HR}:com.google.android.gms:merge_heart_rate_bpm`,
@@ -111,10 +121,50 @@ describe('parseGoogleFitFile raw streams', () => {
 
   test('keeps existing tables and adds raw tables, and validates', () => {
     expect(Object.keys(result.data)).toEqual([
-      'Daily Activity', 'Raw Heart Rate', 'Raw Steps', 'Raw Distance', 'Raw Activity Segments',
+      'Daily Activity', 'Activity Sessions', 'Raw Heart Rate', 'Raw Steps', 'Raw Distance', 'Raw Activity Segments',
     ]);
     expect(validateGoogleFitData(result).valid).toBe(true);
-    expect(result.data['Daily Activity']).toHaveLength(1);
+  });
+
+  test('the window also cuts Daily Activity and Sessions', () => {
+    expect(result.data['Daily Activity'].map((r) => r.Date)).toEqual(['2026-03-01']);
+    expect(result.data['Activity Sessions']).toHaveLength(1);
+    expect(result.data['Activity Sessions'][0].Steps).toBe('100');
+  });
+
+  test('reports what the window removed, in the googletakeout metadata shape', () => {
+    expect(result.metadata.window).toEqual({
+      months: 6,
+      cutoff: '2026-01-01',
+      droppedRowCounts: { 'Raw Heart Rate': 1, 'Daily Activity': 1, 'Activity Sessions': 1 },
+      undatedRowCounts: {},
+      totalDropped: 3,
+    });
+  });
+
+  test('windowMonths 0 disables the window everywhere', async () => {
+    const all = await parseGoogleFitFile(await buildZip(FILES), undefined, { now: NOW, windowMonths: 0 });
+    expect(all.data['Daily Activity']).toHaveLength(2);
+    expect(all.data['Activity Sessions']).toHaveLength(2);
+    expect(all.data['Raw Heart Rate']).toHaveLength(3);
+    expect(all.metadata.window).toMatchObject({ months: null, cutoff: null, totalDropped: 0 });
+  });
+
+  test('rows of unknown age are removed when a window applies', async () => {
+    const undated = await parseGoogleFitFile(await buildZip({
+      'Takeout/Fit/Daily activity metrics/Daily activity metrics.csv': 'Date,Step count\nnot-a-date,5\n2026-03-01,7\n',
+    }), undefined, { now: NOW });
+    expect(undated.data['Daily Activity'].map((r) => r.Date)).toEqual(['2026-03-01']);
+    expect(undated.metadata.window.droppedRowCounts).toEqual({ 'Daily Activity': 1 });
+    expect(undated.metadata.window.undatedRowCounts).toEqual({ 'Daily Activity': 1 });
+  });
+
+  test('says so when everything is older than the window', async () => {
+    const old = await parseGoogleFitFile(await buildZip({
+      'Takeout/Fit/Daily activity metrics/Daily activity metrics.csv': 'Date,Step count\n2024-01-01,5\n',
+    }), undefined, { now: NOW });
+    expect(old.data).toEqual({});
+    expect(old.parsingErrors.tablesNotParsed.some((t) => t.sheetName === 'Time window' && /2026-01-01/.test(t.reason))).toBe(true);
   });
 
   test('heart rate: window applied, sorted, merged stream only, compact columns', () => {
