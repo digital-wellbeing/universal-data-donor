@@ -205,9 +205,12 @@ export async function parseRawStreams(zip, options = {}) {
       if (value === null || !Number.isFinite(value)) return;
       out.push([Number.isFinite(startMs) ? startMs : anchor, anchor, value, app]);
     });
+    // Snapshot per iteration: the progress closure must not read `doneBytes`,
+    // which the loop mutates (react-app's no-loop-func fails CI builds on it).
+    const bytesBefore = doneBytes;
     try {
       await zip.streamText(entry, (t) => scanner.push(t), (fraction) => {
-        if (onProgress) onProgress(Math.min(1, (doneBytes + fraction * (entry.size || 0)) / totalBytes));
+        if (onProgress) onProgress(Math.min(1, (bytesBefore + fraction * (entry.size || 0)) / totalBytes));
       });
       if (scanner.malformed > 0) {
         notes.push({
