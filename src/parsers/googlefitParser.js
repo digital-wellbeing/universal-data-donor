@@ -1,11 +1,12 @@
-import JSZip from 'jszip';
+import { openZip } from '../utils/zipReader';
+import { parseRawStreams } from './googlefitRawStreams';
 
 /**
  * Parser for Google Fit data from a Google Takeout export (.zip).
  *
  * Google Takeout's "Fit" export contains several folders. This parser reads the
  * two clean, research-relevant, low-sensitivity layers and turns them into two
- * review tables:
+ * review tables, then adds the raw sample streams (see below):
  *
  *   1. "Daily Activity"    — one row per day, aggregated from every 15-minute
  *      bucket in `Takeout/Fit/Daily activity metrics/<YYYY-MM-DD>.csv`
@@ -14,12 +15,19 @@ import JSZip from 'jszip';
  *      `Takeout/Fit/All Sessions/*.json` file (activity type, start/end,
  *      duration, and the aggregate metrics Google attaches to the session).
  *
- * Location columns (latitude / longitude) in the daily CSVs are dropped by
- * default as they are identifying; the raw per-sample streams under
- * `All Data/` and the GPS `.tcx` tracks under `Activities/` are intentionally
- * not parsed (heavy and highly granular). Add them here if a study needs them.
+ *   3. "Raw ..." tables  — every sample of heart rate, steps, distance,
+ *      calories, activity segments and sleep segments from
+ *      `Takeout/Fit/All Data/*.json`, limited to the study window (the last 6
+ *      months before upload). Streamed, never loaded whole; see
+ *      googlefitRawStreams.js.
+ *
+ * Location columns (latitude / longitude) in the daily CSVs are dropped as they
+ * are identifying; location streams under `All Data/` and the GPS `.tcx`
+ * tracks under `Activities/` are intentionally never read.
  *
  * @param {File} file - Uploaded Google Takeout .zip
+ * @param {(fraction: number) => void} [onProgress] - 0..1 progress of the raw-stream pass
+ * @param {{now?: number, windowMonths?: number}} [options] - override the study window (tests)
  * @returns {Promise<{data: Object, parsingErrors: {sheetsNotFound: string[], tablesNotParsed: Object[]}}>}
  */
 
@@ -384,7 +392,7 @@ const mapWithConcurrency = async (items, limit, fn) => {
   return results;
 };
 
-export default async function parseGoogleFitFile(file) {
+export default async function parseGoogleFitFile(file, onProgress, options = {}) {
   const data = {};
   const parsingErrors = {
     sheetsNotFound: [],
@@ -393,7 +401,9 @@ export default async function parseGoogleFitFile(file) {
 
   let zip;
   try {
-    zip = await JSZip.loadAsync(file);
+    // Streaming reader: reads the central directory, then each entry on demand,
+    // so a multi-hundred-MB Takeout never has to sit in memory as one buffer.
+    zip = await openZip(file);
   } catch (error) {
     parsingErrors.tablesNotParsed.push({
       sheetName: 'Google Fit Takeout',
@@ -403,7 +413,9 @@ export default async function parseGoogleFitFile(file) {
     return { data, parsingErrors };
   }
 
-  const entries = Object.keys(zip.files).filter((path) => !zip.files[path].dir);
+  const byName = new Map(zip.entries.map((e) => [e.name, e]));
+  const readText = (path) => zip.readText(byName.get(path));
+  const entries = zip.entries.map((e) => e.name);
   const combinedDailyPath = entries.find((p) => COMBINED_DAILY_RE.test(p));
   // Per-day intraday files, excluding the combined rollup.
   const perDayPaths = entries.filter((p) => DAILY_DIR_RE.test(p) && !COMBINED_DAILY_RE.test(p));
@@ -415,7 +427,7 @@ export default async function parseGoogleFitFile(file) {
   let dailyRows = [];
   if (combinedDailyPath) {
     try {
-      const text = await zip.files[combinedDailyPath].async('string');
+      const text = await readText(combinedDailyPath);
       const { headers, rows } = parseCsv(text);
       dailyRows = rows.map((values) => formatCombinedDailyRow(headers, values)).filter(Boolean);
     } catch (e) {
@@ -427,7 +439,7 @@ export default async function parseGoogleFitFile(file) {
         const match = path.match(DAILY_DIR_RE);
         const base = match ? match[1] : path.split('/').pop().replace(/\.csv$/i, '');
         const dateStr = DATE_RE.test(base) ? base : base;
-        const text = await zip.files[path].async('string');
+        const text = await readText(path);
         return aggregateDay(dateStr, parseCsv(text));
       } catch (e) {
         return null;
@@ -465,7 +477,7 @@ export default async function parseGoogleFitFile(file) {
   } else {
     const parsed = (await mapWithConcurrency(sessionPaths, 48, async (path) => {
       try {
-        const text = await zip.files[path].async('string');
+        const text = await readText(path);
         return parseSession(text);
       } catch (e) {
         return null;
@@ -507,6 +519,20 @@ export default async function parseGoogleFitFile(file) {
         return row;
       });
     }
+  }
+
+  // ---- Raw streams (All Data), study window only -------------------------
+  try {
+    const raw = await parseRawStreams(zip, { onProgress, ...options });
+    Object.assign(data, raw.tables);
+    parsingErrors.tablesNotParsed.push(...raw.notes);
+    if (!raw.hasAllData) parsingErrors.sheetsNotFound.push('All Data');
+  } catch (e) {
+    parsingErrors.tablesNotParsed.push({
+      sheetName: 'Raw Streams',
+      reason: `Failed to read the raw streams: ${e.message}`,
+      expectedPath: 'Takeout/Fit/All Data/*.json',
+    });
   }
 
   return { data, parsingErrors };
