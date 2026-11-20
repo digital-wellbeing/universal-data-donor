@@ -39,3 +39,26 @@ export const makeFile = async (files, compression = 'DEFLATE', name = 'takeout.z
   const bytes = await zip.generateAsync({ type: 'uint8array', compression });
   return new File([bytes], name, { type: 'application/zip' });
 };
+
+/**
+ * Synthetic Google Play Games Services files (HTML) as a `{path: content}` map.
+ * Playtime is dated Sep-Oct 2025 and the games' activity 2015-2016, so a 2026
+ * window drops all of it while a 24-month window keeps the playtime.
+ */
+export const playGamesFiles = () => {
+  const header = '<tr><th>Package Name</th><th>Duration</th><th>First Session Start</th><th>Last Session End</th><th>Number of Sessions</th></tr>';
+  const day = (label, long, pkg) => `<tr><td>${label}</td><td><table class="mdl-data-table inner-table">${header}`
+    + `<tr><td>${pkg}</td><td>30 minutes</td><td>${long} at 10:00:00 AM GMT+1</td><td>${long} at 10:30:00 AM GMT+1</td><td>1</td></tr></table></td></tr>`;
+  const activity = (first, last) => '<table class="mdl-data-table"><tr><th>Field</th><th>Value</th></tr>'
+    + `<tr><td>Time First Played</td><td>${first}</td></tr><tr><td>Time Last Played</td><td>${last}</td></tr></table>`;
+  const root = 'Takeout/Google Play Games Services';
+  return {
+    [`${root}/Global/Playtime.html`]: '<table class="mdl-data-table">'
+      + day('Sep 30, 2025', 'September 30, 2025', 'com.example.one')
+      + day('Oct 1, 2025', 'October 1, 2025', 'com.example.two')
+      + day('Oct 2, 2025', 'October 2, 2025', 'com.example.one')
+      + '</table>',
+    [`${root}/Games/Synthetic Game One/Activity.html`]: activity('2015-07-06T07:13:22Z', '2015-10-16T11:30:27Z'),
+    [`${root}/Games/Synthetic Game Two/Activity.html`]: activity('2016-01-02T08:00:00Z', '2016-02-03T09:30:00Z'),
+  };
+};
