@@ -65,3 +65,35 @@ describe('applyWindow', () => {
     expect(kept).toHaveLength(rows.length);
   });
 });
+
+describe('review fixes: fractional months, day-first dates, undated rows', () => {
+  test('fractional months round to whole months, minimum one', () => {
+    const now = new Date('2026-11-20T12:00:00Z');
+    expect(windowCutoff(now, 0.5)).toBe(utc(2026, 10, 20)); // not "today"
+    expect(windowCutoff(now, 2.4)).toBe(utc(2026, 9, 20));
+    expect(windowCutoff(now, 5.6)).toBe(utc(2026, 5, 20));
+  });
+
+  test.each([
+    ['3 Jan 2025', utc(2025, 1, 3)],
+    ['3 January 2025', utc(2025, 1, 3)],
+    ['19 Nov 2026, 09:08:08 GMT', utc(2026, 11, 19)],
+    ['3. Jan. 2025', utc(2025, 1, 3)],
+  ])('reads day-first %p', (input, expected) => {
+    expect(parseLooseDate(input)).toBe(expected);
+  });
+
+  test('can drop rows whose date is unknown when a window is active', () => {
+    const rows = [{ ts: utc(2026, 11, 1) }, { ts: null }, { ts: utc(2025, 1, 1) }];
+    const { kept, dropped, undated } = applyWindow(rows, (r) => r.ts, utc(2026, 5, 20), { keepUndated: false });
+    expect(kept).toHaveLength(1);
+    expect(dropped).toBe(2); // one too old + one undated
+    expect(undated).toBe(1);
+  });
+
+  test('keeps undated rows when there is no window to enforce', () => {
+    const { kept, dropped } = applyWindow([{ ts: null }], (r) => r.ts, -Infinity, { keepUndated: false });
+    expect(kept).toHaveLength(1);
+    expect(dropped).toBe(0);
+  });
+});
