@@ -9,6 +9,7 @@ const parserImporters = {
   fitbitParser: () => import('../parsers/fitbitParser.js'),
   samsungHealthParser: () => import('../parsers/samsungHealthParser.js'),
   instagramParser: () => import('../parsers/instagramParser.js'),
+  googleTakeoutParser: () => import('../parsers/googleTakeoutParser.js'),
 };
 
 export const getParser = async (parserName) => {

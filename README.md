@@ -39,6 +39,7 @@ streams, GPS, profiles, device identifiers or free text.
 | `fitbit` | Google Takeout "Fitbit" / "Google Health" .zip (legacy JSON and 2024–2026 CSV layouts) | Daily Activity, Sleep, Exercise |
 | `samsunghealth` | Samsung Health → Download personal data, folder compressed to .zip | Daily Activity, Sleep, Exercise |
 | `instagram` | Instagram "Download your information" (JSON format) .zip | Daily Activity (counts only), Activity Totals, Topics |
+| `googletakeout` | Google Takeout, **all .zip parts at once**: Fit, Google Health/Fitbit, Play Games Services, YouTube history (HTML or JSON) | Source-labelled tables (`Google Fit - …`, `Google Health - …`, `Play Games - …`, `YouTube - Viewing Sessions` / `Daily Activity`) |
 
 Cross-cutting rules:
 - **Overlapping sources are never summed** (phone + watch + mirrored apps all
@@ -51,6 +52,18 @@ Cross-cutting rules:
   and are dated by the wake-up day.
 - **Instagram** is reduced to per-day counts: no usernames, links, message or
   comment text, captions, media or search terms leave the parser.
+- **Google Takeout** (`googletakeout`) takes every part of a split export at
+  once, finds which services each zip holds, and keeps only the last
+  `general.parserOptions.windowMonths` months (default 6; 0 disables the
+  window). Rows dropped by the window (including rows whose date cannot be
+  read, and the "first played" date of a game still played recently if it
+  predates the window) are counted per table and recorded as `windowFilter`
+  in the donation. Identical zips selected twice are read once. YouTube history keeps only *when* things
+  happened: no titles, URLs, channels or search text. Takeout has no watch
+  durations, so "viewing sessions" are estimated by grouping watch events
+  at most `youtubeSessionGapMinutes` (default 30) apart. YouTube timestamps
+  are read in English only; other languages are reported, not guessed. The
+  server's `ALLOWED_PLATFORMS` must include `googletakeout`.
 - Large uploads report progress; the streaming zip reader (`src/utils/zipReader.js`)
   supports ZIP64 and keeps memory flat (a 700 MB `export.xml` parses in ~5 s
   with a ~60 MB heap).
