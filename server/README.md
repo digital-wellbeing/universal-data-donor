@@ -44,7 +44,34 @@ The health response includes `publicKey` for the browser to seal to.
 `503 storage_low` (so the container turns unhealthy) when free space drops below
 `MIN_FREE_BYTES`.
 
-Tests: `uv run --with flask==3.0.3 --with pynacl==1.5.0 --with pytest python -m pytest server/tests`.
+## Storage: SQLite (default) or MySQL
+
+`STORAGE_BACKEND=mysql` stores donations in a MySQL server instead of the local file
+(`storage.py`). Setup, in this order:
+
+1. A DB administrator runs `mysql_schema.sql` once in the target database (two tables,
+   prefixed `datadonation_`, so they cannot collide with another application's) and
+   creates the API's account with `SELECT, INSERT` on those two tables only (the
+   commented block at the end of the file). The API itself needs no DDL rights.
+2. Put `STORAGE_BACKEND=mysql` and the `MYSQL_*` settings in `datadonation-api.env`
+   (see the example; use `MYSQL_PASSWORD_FILE` rather than the password itself).
+3. Copy the rows already in SQLite:
+   `docker exec datadonation-api python migrate_sqlite_to_mysql.py --dry-run`, then
+   without `--dry-run`. It is idempotent, checks each copied row byte for byte, and
+   refuses to run while any source row is unencrypted.
+
+The ciphertext is stored in chunks of at most 4 MiB, inside one transaction, because a
+managed MySQL's `max_allowed_packet` is often 16 MiB and a donation can be ~100 MiB.
+Only ciphertext may be stored: the API will not start with `STORAGE_BACKEND=mysql`
+unless `REQUIRE_ENCRYPTION=1` and `DONATION_PUBLIC_KEY` are set, and the store itself
+rejects any payload that is not `enc:v1:`. While MySQL is unreachable, donations
+get `503 storage_unavailable` and the health check turns unhealthy. The rate limiter
+keeps using its small local SQLite file either way. Withdrawing a donation is an
+administrator `DELETE ... WHERE submission_id = ...` (the chunks cascade).
+
+Tests: `uv run --with flask==3.0.3 --with pynacl==1.5.0 --with pymysql==1.1.1 --with cryptography==43.0.3 --with pytest python -m pytest server/tests`.
+The MySQL tests start a throwaway `mysql:8.4` container (they skip when Docker is not
+available) and apply `mysql_schema.sql` exactly as an administrator would.
 
 ## Config (env, see `datadonation-api.env.example`)
 
@@ -53,7 +80,7 @@ TEST secret), `TURNSTILE_ACTION` (optional; require siteverify's echoed action
 to equal it — the widget sends `donate`), `TURNSTILE_HOSTNAMES` (optional
 comma-separated allow-list checked against siteverify's `hostname`), `IP_SALT`,
 `RATE_MAX`, `RATE_WINDOW`, `MAX_BYTES`, `MIN_FREE_BYTES`, `MAX_DB_BYTES`,
-`MAX_CONCURRENT_SUBMITS`, `XFF_TRUSTED_HOPS`.
+`MAX_CONCURRENT_SUBMITS`, `XFF_TRUSTED_HOPS`, `STORAGE_BACKEND` and `MYSQL_*` (above).
 
 Behind a gateway the rate limit only works per client once Caddy trusts the
 gateway's `X-Forwarded-For` (`sudo bash deploy/host/trust-gateway-xff.sh`) and
