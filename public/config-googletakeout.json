@@ -28,7 +28,7 @@
       "process": "We will walk you through this process step by step. During this process no data is stored or sent to a server. Only data from the last 6 months is kept; anything older is removed automatically on your own computer. YouTube video titles, channels, links and search terms are never read into the donation, only when you watched or searched. You can also delete rows before donating. Data will only be donated and stored when you click the button \"Yes, donate\" on the page that shows your data.",
       "dataScope": {
         "title": "What we ask for, and what is actually read",
-        "intro": "In Google Takeout, please include only the services below. This tool then reads only the data listed for each one, on your own computer:",
+        "intro": "Your Google Takeout download may contain data from the services below. This tool reads only the data listed for each one, on your own computer:",
         "readLabel": "Read:",
         "notReadLabel": "Not read:",
         "services": [
@@ -48,13 +48,18 @@
             "notRead": "your player profile and picture, scores, achievements and saved game data."
           },
           {
+            "name": "Google Play Movies & TV",
+            "read": "nothing. It can be part of your download, but this tool does not read it.",
+            "notRead": "your purchases, rentals, watchlist, ratings and viewing history. None of it is used or donated."
+          },
+          {
             "name": "YouTube and YouTube Music",
             "read": "only when you watched or searched: dates and times, how many videos you watched, music tracks you played and searches you made, and estimated viewing sessions.",
             "notRead": "video titles, channel names, links and search text are not kept in the donation, and your subscriptions, playlists, comments and uploads are not read."
           }
         ],
         "subsetNote": "For every service above, only the data listed under \"Read\" is used; everything else in those folders is ignored.",
-        "otherServices": "Your export may contain other services as well (for example Google Play Movies & TV). This tool does not read them: they are never opened, and nothing from them is donated."
+        "otherServices": "Your export may contain other services as well. This tool does not read them: they are never opened, and nothing from them is donated."
       },
       "donationAgreement": "By clicking the button \"Yes, donate\":",
       "agreementPoints": [
@@ -67,7 +72,7 @@
     },
     "upload": {
       "title": "Upload File",
-      "intro": "Please export your data from Google Takeout (takeout.google.com). Select \"Fit\", \"Google Health\" or \"Fitbit\" (if you have them), \"Google Play Games Services\" and \"YouTube and YouTube Music\" (under its options, include \"history\"), then download the export. Any other service in the export is ignored. Google may split it into several .zip files: choose all of them at once.",
+      "intro": "Please export your data from Google Takeout (takeout.google.com). Select \"Fit\", \"Google Health\" or \"Fitbit\" (if you have them), \"Google Play Games Services\" and \"YouTube and YouTube Music\" (under its options, include \"history\"), then download the export. If it also contains \"Google Play Movies & TV\" or any other service, that is ignored. Google may split it into several .zip files: choose all of them at once.",
       "uploadButton": "Upload files",
       "selectedFile": "Selected: ",
       "processing": "Processing your file... This may take a few moments for large exports.",
