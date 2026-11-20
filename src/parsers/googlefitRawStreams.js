@@ -178,7 +178,9 @@ const utc = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
  * @param {number} [options.now] - upload time, epoch ms (default: now)
  * @param {number} [options.windowMonths] - default RAW_WINDOW_MONTHS
  * @param {(fraction: number) => void} [options.onProgress]
- * @returns {Promise<{tables: Object, notes: Object[], hasAllData: boolean}>}
+ * @returns {Promise<{tables: Object, notes: Object[], hasAllData: boolean, dropped: Object, undated: Object}>}
+ *   `dropped` maps table name -> samples removed by the window (including those of
+ *   unusable time); `undated` is the subset removed because their time was unusable.
  */
 export async function parseRawStreams(zip, options = {}) {
   const { now = Date.now(), windowMonths = RAW_WINDOW_MONTHS, onProgress } = options;
@@ -192,6 +194,8 @@ export async function parseRawStreams(zip, options = {}) {
 
   const samples = new Map(RAW_STREAMS.map((s) => [s, []])); // stream -> [startMs, endMs, value, app]
   const notes = [];
+  const dropped = new Map(); // table -> samples removed for being outside the window
+  const undated = new Map(); // table -> samples removed because their time is unusable
   let doneBytes = 0;
 
   for (const { stream, entry, app } of files) {
@@ -200,7 +204,11 @@ export async function parseRawStreams(zip, options = {}) {
       const startMs = nanosToMs(point.startTimeNanos);
       const endMs = nanosToMs(point.endTimeNanos);
       const anchor = Number.isFinite(endMs) ? endMs : startMs;
-      if (!Number.isFinite(anchor) || anchor < cutoff) return; // outside the window
+      if (!Number.isFinite(anchor) || anchor < cutoff) { // outside the window, or no usable time
+        dropped.set(stream.table, (dropped.get(stream.table) || 0) + 1);
+        if (!Number.isFinite(anchor)) undated.set(stream.table, (undated.get(stream.table) || 0) + 1);
+        return;
+      }
       const value = pointValue(point);
       if (value === null || !Number.isFinite(value)) return;
       out.push([Number.isFinite(startMs) ? startMs : anchor, anchor, value, app]);
@@ -257,5 +265,5 @@ export async function parseRawStreams(zip, options = {}) {
       return row;
     });
   }
-  return { tables, notes, hasAllData };
+  return { tables, notes, hasAllData, dropped: Object.fromEntries(dropped), undated: Object.fromEntries(undated) };
 }
