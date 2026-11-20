@@ -17,6 +17,9 @@ const ConsentPage = () => {
     return <div>Loading...</div>;
   }
 
+  // Optional: a service-by-service statement of what is requested and what is read.
+  const scope = config.page.consent.dataScope;
+
   return (
     <div className="container mt-5">
       <div className="card">
@@ -35,6 +38,27 @@ const ConsentPage = () => {
         <div className="card-body">
           <p>{config.page.consent.intro}</p>
           <p>{config.page.consent.process}</p>
+          {scope && (
+            <div className="mb-3 p-3 border rounded bg-light" data-testid="data-scope">
+              <h3 className="h6">{scope.title}</h3>
+              {scope.intro && <p className="mb-2">{scope.intro}</p>}
+              <ul>
+                {(scope.services || []).map((service) => (
+                  <li key={service.name} className="mb-2">
+                    <strong>{service.name}</strong>
+                    <div>
+                      <span className="fw-semibold">{scope.readLabel || 'Read:'}</span> {service.read}
+                    </div>
+                    <div className="text-muted">
+                      <span className="fw-semibold">{scope.notReadLabel || 'Not read:'}</span> {service.notRead}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {scope.subsetNote && <p className="mb-2">{scope.subsetNote}</p>}
+              {scope.otherServices && <p className="mb-0">{scope.otherServices}</p>}
+            </div>
+          )}
           <p><strong>{config.page.consent.donationAgreement}</strong></p>
           <ul>
             {config.page.consent.agreementPoints.map((point, index) => (

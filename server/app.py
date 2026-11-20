@@ -3,8 +3,8 @@ Data-donation submission endpoint for the Universal Data Donor.
 
 Receives donation packages POSTed by the frontend at /datadonation/submit,
 gates them behind a server-verified Cloudflare Turnstile challenge + per-IP rate
-limiting + a payload-size cap + basic shape validation, and stores accepted
-donations in a SQLite database.
+limiting + a payload-size cap + a free-disk guard + strict payload validation
+(see validation.py), and stores accepted donations in a SQLite database.
 
 Config via environment (all optional; safe test defaults for local dev):
   DONATION_DB       Path to the SQLite file (default ./donations.sqlite)
@@ -21,6 +21,10 @@ Config via environment (all optional; safe test defaults for local dev):
   MAX_BYTES         Max request body size (default 25 MiB).
   RATE_MAX          Max accepted submissions per IP per window (default 5).
   RATE_WINDOW       Rate-limit window in seconds (default 3600).
+  MIN_FREE_BYTES    Refuse donations (and report unhealthy) when the data volume has
+                    less than this much free space, counting twice the incoming body
+                    (default 2 GiB). Fails closed if the volume cannot be inspected.
+  MAX_DB_BYTES      Optional cap on the SQLite file size; 0 = no cap (default).
   DONATION_PUBLIC_KEY  Base64 X25519 public key. When set, every donation payload
                     is stored sealed-box encrypted ("enc:v1:..."); only the offline
                     private key can read it (see donation_crypto.py). Unset = plaintext.
@@ -41,6 +45,7 @@ import os
 import json
 import time
 import hmac
+import shutil
 import hashlib
 import sqlite3
 import threading
@@ -51,6 +56,7 @@ import urllib.request
 from flask import Flask, request, jsonify
 
 from donation_crypto import encrypt_payload
+from validation import PayloadError, validate_donation
 
 DONATION_DB = os.environ.get("DONATION_DB", os.path.join(os.path.dirname(__file__), "donations.sqlite"))
 # Cloudflare's documented "always passes" test secret. Override in production.
@@ -65,6 +71,8 @@ TURNSTILE_HOSTNAMES = {
 }
 IP_SALT = os.environ.get("IP_SALT", "dev-insecure-salt-change-me")
 MAX_BYTES = int(os.environ.get("MAX_BYTES", 25 * 1024 * 1024))
+MIN_FREE_BYTES = int(os.environ.get("MIN_FREE_BYTES", str(2 * 1024 ** 3)))
+MAX_DB_BYTES = int(os.environ.get("MAX_DB_BYTES", "0"))
 RATE_MAX = int(os.environ.get("RATE_MAX", "5"))
 RATE_WINDOW = int(os.environ.get("RATE_WINDOW", "3600"))
 DONATION_PUBLIC_KEY = os.environ.get("DONATION_PUBLIC_KEY", "").strip()
@@ -119,6 +127,26 @@ def init_db():
             """
         )
         c.execute("CREATE INDEX IF NOT EXISTS idx_rate_events ON rate_events (ip_hash, ts)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_donations_submission ON donations (submission_id)")
+
+
+def storage_ok(incoming_bytes=0):
+    """True when the data volume can safely take another donation.
+
+    Needs MIN_FREE_BYTES free after reserving twice the incoming body (stored
+    encrypted + base64 + WAL), and the database under MAX_DB_BYTES when that is set.
+    Fails closed: if the volume cannot be inspected, report it as full.
+    """
+    try:
+        free = shutil.disk_usage(os.path.dirname(os.path.abspath(DONATION_DB))).free
+        if free - 2 * max(0, incoming_bytes) < MIN_FREE_BYTES:
+            return False
+        if MAX_DB_BYTES and os.path.getsize(DONATION_DB) > MAX_DB_BYTES:
+            return False
+    except OSError as exc:
+        app.logger.error("Storage check failed, refusing donations: %s", exc)
+        return False
+    return True
 
 
 def _strip_port(addr):
@@ -193,6 +221,11 @@ def rate_ok(ip_hash_value):
 
 @app.get("/datadonation/submit")
 def health():
+    # Doubles as the alert hook: the container healthcheck (and any uptime monitor
+    # polling this URL) turns unhealthy when the data volume is nearly full.
+    if not storage_ok():
+        app.logger.error("Health: storage is low (free space below MIN_FREE_BYTES or DB over MAX_DB_BYTES)")
+        return jsonify(ok=False, error="storage_low"), 503
     return jsonify(ok=True, service="datadonation-submit")
 
 
@@ -206,6 +239,11 @@ def submit():
     token = request.headers.get("CF-Turnstile-Response")
     if not verify_turnstile(token, ip):
         return jsonify(ok=False, error="captcha_failed"), 403
+
+    # Do not read a large body onto a volume that cannot hold it.
+    if not storage_ok(request.content_length or 0):
+        app.logger.error("Refusing a donation: storage is low")
+        return jsonify(ok=False, error="storage_low"), 503
 
     # Reading and parsing the body is the memory-heavy part: gate it.
     if not _submit_slots.acquire(blocking=False):
@@ -225,22 +263,30 @@ def _handle_body(ip_hash_value):
     if not rate_ok(ip_hash_value):
         return jsonify(ok=False, error="rate_limited"), 429
 
-    # 3) Validate the donation payload shape.
+    # 3) Validate the donation payload: a known platform, then a strictly checked
+    #    shape (see validation.py). Totals are counted here, not taken from the client.
     donation = body.get("donation")
-    if not isinstance(donation, dict) or not isinstance(donation.get("data"), dict):
+    platform = str(body.get("platform") or "").lower()
+    if platform not in ALLOWED_PLATFORMS:
+        return jsonify(ok=False, error="unknown_platform"), 400
+    try:
+        total_tables, total_rows = validate_donation(donation, platform)
+    except PayloadError as exc:
+        # Log why (no payload content), tell the caller only that it was invalid.
+        app.logger.warning("Rejected a %s donation: %s", platform, exc)
         return jsonify(ok=False, error="invalid_payload"), 400
 
-    platform = str(body.get("platform") or "").lower()
-    if platform and platform not in ALLOWED_PLATFORMS:
-        return jsonify(ok=False, error="unknown_platform"), 400
-
-    meta = donation.get("metadata") if isinstance(donation.get("metadata"), dict) else {}
     received_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     payload_json = json.dumps(donation, ensure_ascii=False)
     stored_payload = encrypt_payload(payload_json, DONATION_PUBLIC_KEY) if DONATION_PUBLIC_KEY else payload_json
 
+    submission_id = donation["submissionId"]
     with _write_lock, _connect() as c:
+        # A submission id is the participant's handle for withdrawal: never let a
+        # second package overwrite or shadow an existing one.
+        if c.execute("SELECT 1 FROM donations WHERE submission_id = ?", (submission_id,)).fetchone():
+            return jsonify(ok=False, error="duplicate_submission"), 409
         cur = c.execute(
             """
             INSERT INTO donations
@@ -249,19 +295,19 @@ def _handle_body(ip_hash_value):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                str(donation.get("submissionId") or ""),
+                submission_id,
                 platform,
                 received_at,
                 ip_hash_value,
                 (request.headers.get("User-Agent") or "")[:300],
-                meta.get("totalTables"),
-                meta.get("totalRemainingRows"),
+                total_tables,
+                total_rows,
                 stored_payload,
             ),
         )
         row_id = cur.lastrowid
 
-    return jsonify(ok=True, id=row_id, submissionId=donation.get("submissionId"))
+    return jsonify(ok=True, id=row_id, submissionId=submission_id)
 
 
 init_db()
