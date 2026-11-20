@@ -1,11 +1,13 @@
-import JSZip from 'jszip';
+import { openZip } from '../utils/zipReader';
+import { windowCutoff } from '../utils/timeWindow';
+import { parseRawStreams, RAW_WINDOW_MONTHS } from './googlefitRawStreams';
 
 /**
  * Parser for Google Fit data from a Google Takeout export (.zip).
  *
  * Google Takeout's "Fit" export contains several folders. This parser reads the
  * two clean, research-relevant, low-sensitivity layers and turns them into two
- * review tables:
+ * review tables, then adds the raw sample streams (see below):
  *
  *   1. "Daily Activity"    — one row per day, aggregated from every 15-minute
  *      bucket in `Takeout/Fit/Daily activity metrics/<YYYY-MM-DD>.csv`
@@ -14,13 +16,24 @@ import JSZip from 'jszip';
  *      `Takeout/Fit/All Sessions/*.json` file (activity type, start/end,
  *      duration, and the aggregate metrics Google attaches to the session).
  *
- * Location columns (latitude / longitude) in the daily CSVs are dropped by
- * default as they are identifying; the raw per-sample streams under
- * `All Data/` and the GPS `.tcx` tracks under `Activities/` are intentionally
- * not parsed (heavy and highly granular). Add them here if a study needs them.
+ *   3. "Raw ..." tables  — every sample of heart rate, steps, distance,
+ *      calories, activity segments and sleep segments from
+ *      `Takeout/Fit/All Data/*.json`. Streamed, never loaded whole; see
+ *      googlefitRawStreams.js.
+ *
+ * Study window: every table is limited to the last `windowMonths` months
+ * (default 6, 0 disables) before `now`. Rows older than that, or of unknown
+ * age, are removed here and counted in `metadata.window` (same shape as the
+ * googletakeout parser), so older data never reaches the review page.
+ *
+ * Location columns (latitude / longitude) in the daily CSVs are dropped as they
+ * are identifying; location streams under `All Data/` and the GPS `.tcx`
+ * tracks under `Activities/` are intentionally never read.
  *
  * @param {File} file - Uploaded Google Takeout .zip
- * @returns {Promise<{data: Object, parsingErrors: {sheetsNotFound: string[], tablesNotParsed: Object[]}}>}
+ * @param {(fraction: number) => void} [onProgress] - 0..1 progress of the raw-stream pass
+ * @param {{now?: number, windowMonths?: number}} [options] - override the study window (tests)
+ * @returns {Promise<{data: Object, parsingErrors: {sheetsNotFound: string[], tablesNotParsed: Object[]}, metadata: {window: Object}}>}
  */
 
 const DAILY_DIR_RE = /(?:^|\/)Daily activity metrics\/([^/]+)\.csv$/i;
@@ -384,7 +397,8 @@ const mapWithConcurrency = async (items, limit, fn) => {
   return results;
 };
 
-export default async function parseGoogleFitFile(file) {
+export default async function parseGoogleFitFile(file, onProgress, options = {}) {
+  const { now = Date.now(), windowMonths = RAW_WINDOW_MONTHS } = options;
   const data = {};
   const parsingErrors = {
     sheetsNotFound: [],
@@ -393,7 +407,9 @@ export default async function parseGoogleFitFile(file) {
 
   let zip;
   try {
-    zip = await JSZip.loadAsync(file);
+    // Streaming reader: reads the central directory, then each entry on demand,
+    // so a multi-hundred-MB Takeout never has to sit in memory as one buffer.
+    zip = await openZip(file);
   } catch (error) {
     parsingErrors.tablesNotParsed.push({
       sheetName: 'Google Fit Takeout',
@@ -403,7 +419,9 @@ export default async function parseGoogleFitFile(file) {
     return { data, parsingErrors };
   }
 
-  const entries = Object.keys(zip.files).filter((path) => !zip.files[path].dir);
+  const byName = new Map(zip.entries.map((e) => [e.name, e]));
+  const readText = (path) => zip.readText(byName.get(path));
+  const entries = zip.entries.map((e) => e.name);
   const combinedDailyPath = entries.find((p) => COMBINED_DAILY_RE.test(p));
   // Per-day intraday files, excluding the combined rollup.
   const perDayPaths = entries.filter((p) => DAILY_DIR_RE.test(p) && !COMBINED_DAILY_RE.test(p));
@@ -415,7 +433,7 @@ export default async function parseGoogleFitFile(file) {
   let dailyRows = [];
   if (combinedDailyPath) {
     try {
-      const text = await zip.files[combinedDailyPath].async('string');
+      const text = await readText(combinedDailyPath);
       const { headers, rows } = parseCsv(text);
       dailyRows = rows.map((values) => formatCombinedDailyRow(headers, values)).filter(Boolean);
     } catch (e) {
@@ -427,7 +445,7 @@ export default async function parseGoogleFitFile(file) {
         const match = path.match(DAILY_DIR_RE);
         const base = match ? match[1] : path.split('/').pop().replace(/\.csv$/i, '');
         const dateStr = DATE_RE.test(base) ? base : base;
-        const text = await zip.files[path].async('string');
+        const text = await readText(path);
         return aggregateDay(dateStr, parseCsv(text));
       } catch (e) {
         return null;
@@ -465,7 +483,7 @@ export default async function parseGoogleFitFile(file) {
   } else {
     const parsed = (await mapWithConcurrency(sessionPaths, 48, async (path) => {
       try {
-        const text = await zip.files[path].async('string');
+        const text = await readText(path);
         return parseSession(text);
       } catch (e) {
         return null;
@@ -509,5 +527,55 @@ export default async function parseGoogleFitFile(file) {
     }
   }
 
-  return { data, parsingErrors };
+  // ---- Raw streams (All Data) --------------------------------------------
+  const droppedRowCounts = {};
+  const undatedRowCounts = {};
+  try {
+    const raw = await parseRawStreams(zip, { onProgress, now, windowMonths });
+    Object.assign(data, raw.tables);
+    Object.assign(droppedRowCounts, raw.dropped);
+    Object.assign(undatedRowCounts, raw.undated);
+    parsingErrors.tablesNotParsed.push(...raw.notes);
+    if (!raw.hasAllData) parsingErrors.sheetsNotFound.push('All Data');
+  } catch (e) {
+    parsingErrors.tablesNotParsed.push({
+      sheetName: 'Raw Streams',
+      reason: `Failed to read the raw streams: ${e.message}`,
+      expectedPath: 'Takeout/Fit/All Data/*.json',
+    });
+  }
+
+  // ---- Study window for the summary tables -------------------------------
+  // (Raw streams were already cut while streaming.) Rows of unknown age are
+  // removed too, so nothing older than the window can leave the browser.
+  const cutoff = windowCutoff(now, windowMonths);
+  const windowed = Number.isFinite(cutoff);
+  for (const name of ['Daily Activity', 'Activity Sessions']) {
+    if (!data[name] || !windowed) continue;
+    const kept = data[name].filter((row) => Number.isFinite(row._timestamp) && row._timestamp >= cutoff);
+    const dropped = data[name].length - kept.length;
+    const undated = data[name].filter((row) => !Number.isFinite(row._timestamp)).length;
+    if (dropped > 0) droppedRowCounts[name] = dropped;
+    if (undated > 0) undatedRowCounts[name] = undated;
+    if (kept.length > 0) data[name] = kept;
+    else delete data[name];
+  }
+
+  const totalDropped = Object.values(droppedRowCounts).reduce((sum, n) => sum + n, 0);
+  const cutoffDate = windowed ? new Date(cutoff).toISOString().slice(0, 10) : null;
+  const effectiveMonths = windowed ? Math.max(1, Math.round(windowMonths)) : null;
+  if (Object.keys(data).length === 0 && totalDropped > 0) {
+    parsingErrors.tablesNotParsed.push({
+      sheetName: 'Time window',
+      reason: `Found ${totalDropped} rows, but all are older than ${cutoffDate} (the last ${effectiveMonths} months), so none can be donated.`,
+    });
+  }
+
+  return {
+    data,
+    parsingErrors,
+    metadata: {
+      window: { months: effectiveMonths, cutoff: cutoffDate, droppedRowCounts, undatedRowCounts, totalDropped },
+    },
+  };
 }

@@ -6,6 +6,7 @@
     "parser": "googlefitParser",
     "validator": "googlefitValidator",
     "fileExtensions": [".zip"],
+    "maxDonationBytes": 83886080,
     "turnstileSitekey": "0x4AAAAAAEQ8u5xZ1gdrl61G"
   },
   "header": {

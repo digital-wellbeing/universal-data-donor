@@ -43,6 +43,9 @@ services:
       - ${DATA_DIR:-/srv/datadonation-data}:/data
     env_file:
       - server/datadonation-api.env
+    # The host has no swap and shares RAM with other services: if a large upload
+    # ever exceeds this, only this container is OOM-killed (and restarted).
+    mem_limit: 1536m
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/datadonation/submit', timeout=3)"]
       interval: 30s
