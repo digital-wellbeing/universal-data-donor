@@ -29,6 +29,17 @@ The payload is validated strictly (`validation.py`): a known platform, a 16-digi
 counted by the server, never taken from the client's `metadata`. A rejected
 payload gets a generic `invalid_payload`; the reason is only logged.
 
+**Encrypted donations (opt-in browser-side encryption).** A body with
+`{"platform", "encrypted": {"v":1, "submissionId", "summary": {"tables", "totalRows"}, "payload": "enc:v1:<base64>"}}`
+instead of `"donation"` is stored as-is (it is already sealed to the study key; see
+`src/utils/encryptDonation.js`). The server can only validate the envelope: a known
+platform, a 16-digit unused `submissionId`, a well-formed `enc:v1:` payload of at least
+the sealed-box overhead, and a summary whose table names are on the platform's
+allow-list and whose `totalRows` equals the sum of the counts. The counts are the
+client's own claim; the contents can only be checked after decryption. Set
+`ACCEPT_PLAINTEXT=0` to refuse plaintext donations (`400 encryption_required`).
+The health response includes `publicKey` for the browser to seal to.
+
 `GET /datadonation/submit` is the health check and also the disk alert: it returns
 `503 storage_low` (so the container turns unhealthy) when free space drops below
 `MIN_FREE_BYTES`.

@@ -1,0 +1,8 @@
+{
+  "_comment": "TEST-ONLY keypair and messages, no real secrets. py_ct was sealed by PyNaCl; js_enc by libsodium-wrappers in the browser format (enc:v1:<base64>). Both suites decrypt both. Regenerate with the snippets in the commit that added this file.",
+  "sk": "HzPh0h+zG0b9364fbn5xRCF7Qs8oBosZ1cK5b13/y+w=",
+  "pk": "hOqTJGEAM3q+uhx8XQPizchxJzD+Gi7/tW2GxT8OoAI=",
+  "msg": "{\"submissionId\": \"1234567890123456\", \"data\": {\"Google Fit - Raw Steps\": [{\"Start (UTC)\": \"2026-01-01 00:00:00\", \"Steps\": \"10\"}]}, \"note\": \"wörld ✓\"}",
+  "py_ct": "XaL6n04kE+SfCOHFpc1y4PW4uoceQuHOHl8dsbcIFw+M98KZSJBpNYFQDwvCHTM41nqZpoTGidYwEydq9uj5qjvG1eadxSWLHjhuGj2AowRbW5aTeP5MInPUkgQpzoJCTkIbUyRMp+Bs1fQP9T70lDC/A+iwRBapdZbHx1RfTMXrG/3Js8Ow5qxy1o4MFlfx9KsKgseEj9S+NxS48pr5U48hhwtxl5LkFXQ8f3hFTrFEKXYGvv8EiMuNvtJZQWk8kIQ2+dNRkg==",
+  "js_enc": "enc:v1:YZM8X2lkirJdQjvvZOyGY1JCAmsfiW+Pq+DDNXtuvk3XCggBJxj+XQkvI0c/i1EMDZDYUc7B/LKN81jWdXpdhw7zIJClfhkOOpluLDM8UiVTYO15t3byFPTvxtpzCM2gNLs/SgcHRKTwpekwjR20yJurNqYhCi+0Bt/JE1mgxmuWZrOwbwhwtaRFgcY1L8KSZ3u8st5FXukcXYHC+aCFv13NwHKD7B3vaH+uRgexQlxUM0RsbA+uybBCwVy70w8nlXmEQXooGw=="
+}

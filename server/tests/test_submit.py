@@ -129,3 +129,87 @@ def test_storage_check_fails_closed(monkeypatch):
         raise OSError("cannot stat")
     monkeypatch.setattr(appmod.shutil, "disk_usage", boom)
     assert appmod.storage_ok(0) is False
+
+
+# --- encrypted envelopes (browser-side encryption) ---
+
+import base64
+from pathlib import Path
+
+from donation_crypto import decrypt_payload
+
+FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "xlang.json").read_text())
+
+
+def env_body(platform="googletakeout", sid=SID, payload=None, tables=None):
+    tables = {"Google Fit - Raw Steps": 1} if tables is None else tables
+    payload = payload or "enc:v1:" + base64.b64encode(b"s" * 120).decode()
+    return {"platform": platform, "encrypted": {"v": 1, "submissionId": sid, "summary": {"tables": tables, "totalRows": sum(tables.values())}, "payload": payload}}
+
+
+def stored_payload():
+    with sqlite3.connect(appmod.DONATION_DB) as c:
+        return c.execute("select payload from donations").fetchone()[0]
+
+
+def test_health_serves_the_public_key(client):
+    info = client.get("/datadonation/submit").get_json()
+    assert info["ok"] is True and info["publicKey"] == appmod.DONATION_PUBLIC_KEY
+
+
+def test_encrypted_donation_is_stored_as_is_with_the_reported_totals(client):
+    body = env_body()
+    r = post(client, body)
+    assert r.status_code == 200 and r.get_json()["submissionId"] == SID
+    assert rows() == [(SID, "googletakeout", 1, 1, "enc:v1:")]
+    assert stored_payload() == body["encrypted"]["payload"]  # not re-encrypted, not altered
+
+
+def test_a_browser_sealed_donation_decrypts_with_the_servers_own_tool(client):
+    """The ciphertext below was sealed by libsodium in JS (the browser's code path)."""
+    r = post(client, env_body(payload=FIXTURE["js_enc"]))
+    assert r.status_code == 200
+    assert decrypt_payload(stored_payload(), FIXTURE["sk"]) == FIXTURE["msg"]
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda b: b["encrypted"].update(payload="not-prefixed"),
+    lambda b: b["encrypted"].update(v=2),
+    lambda b: b["encrypted"].update(submissionId="12"),
+    lambda b: b["encrypted"]["summary"].update(totalRows=99),
+    lambda b: b["encrypted"].update(extra=1),
+    lambda b: b.update(donation={"submissionId": SID, "data": {}}),  # both formats at once
+])
+def test_malformed_envelopes_are_rejected(client, mutate):
+    body = env_body()
+    mutate(body)
+    r = post(client, body)
+    assert r.status_code == 400 and r.get_json()["error"] == "invalid_payload"
+    assert rows() == []
+
+
+def test_unknown_table_in_an_envelope_summary_is_rejected(client):
+    assert post(client, env_body(tables={"Injected Table": 1})).status_code == 400
+
+
+def test_envelope_platform_must_be_known(client):
+    assert post(client, env_body(platform="nope")).get_json()["error"] == "unknown_platform"
+
+
+def test_duplicate_ids_are_refused_across_formats(client):
+    assert post(client, env_body()).status_code == 200
+    assert post(client, package()).status_code == 409           # same id, plaintext format
+    assert post(client, env_body()).status_code == 409          # same id, envelope format
+
+
+def test_plaintext_can_be_refused_while_envelopes_stay_accepted(client, monkeypatch):
+    monkeypatch.setattr(appmod, "ACCEPT_PLAINTEXT", False)
+    r = post(client, package())
+    assert r.status_code == 400 and r.get_json()["error"] == "encryption_required"
+    assert rows() == []
+    assert post(client, env_body()).status_code == 200
+
+
+def test_plaintext_is_accepted_by_default(client):
+    assert appmod.ACCEPT_PLAINTEXT is True
+    assert post(client, package()).status_code == 200
