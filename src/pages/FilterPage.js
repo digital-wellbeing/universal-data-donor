@@ -201,6 +201,8 @@ const FilterPage = ({ parsedData }) => {
         return 'Too many submissions from your network right now. Please try again later.';
       case 'invalid_payload':
       case 'invalid_json':
+      case 'server_busy':
+        return 'The server is busy processing another donation. Please wait a minute and try again.';
       case 'unknown_platform':
         return 'The server rejected the submission. Please contact the researchers.';
       default:
@@ -256,7 +258,11 @@ const FilterPage = ({ parsedData }) => {
   const downloadLocalCopy = (donationPackage, submissionId) => {
     const platformSlug = (config?.general?.platform || 'data')
       .toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'data';
-    const jsonString = JSON.stringify(donationPackage, null, 2);
+    // Pretty-print only small donations: indenting a very large package (raw
+    // sample streams) multiplies its size and can exceed the browser's maximum
+    // string length.
+    const indent = (donationPackage.metadata?.totalRemainingRows || 0) > 50000 ? undefined : 2;
+    const jsonString = JSON.stringify(donationPackage, null, indent);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
