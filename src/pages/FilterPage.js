@@ -203,6 +203,10 @@ const FilterPage = ({ parsedData }) => {
         return 'Too many submissions from your network right now. Please try again later.';
       case 'server_busy':
         return 'The server is busy processing another donation. Please wait a minute and try again.';
+      case 'storage_low':
+        return 'The server cannot accept donations right now. Please try again later, or contact the researchers.';
+      case 'duplicate_submission':
+        return 'This donation was already received. Please contact the researchers if you think this is a mistake.';
       case 'invalid_payload':
       case 'invalid_json':
       case 'unknown_platform':
