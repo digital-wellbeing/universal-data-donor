@@ -28,6 +28,7 @@ const FilterPage = ({ parsedData }) => {
   const [selectionModel, setSelectionModel] = useState({});
   const [deletedRowCounts, setDeletedRowCounts] = useState({});
   const [parsingErrors, setParsingErrors] = useState({ sheetsNotFound: [], tablesNotParsed: [] });
+  const [parserMetadata, setParserMetadata] = useState(null); // e.g. rows dropped by the time window
 
   // Filter state (used by ActivityWatch and any parser that emits `_timestamp` / `_app`).
   const [startDate, setStartDate] = useState('');
@@ -91,6 +92,7 @@ const FilterPage = ({ parsedData }) => {
       setData(parsedData.data);
       setSelectionModel(parsedData.selectionModel);
       setParsingErrors(parsedData.parsingErrors || { sheetsNotFound: [], tablesNotParsed: [] });
+      setParserMetadata(parsedData.parserMetadata || null);
 
       // Initialize deleted row counts for each table
       const initialDeletedCounts = {};
@@ -199,10 +201,10 @@ const FilterPage = ({ parsedData }) => {
         return 'The “I’m human” check failed. Please try again.';
       case 'rate_limited':
         return 'Too many submissions from your network right now. Please try again later.';
-      case 'invalid_payload':
-      case 'invalid_json':
       case 'server_busy':
         return 'The server is busy processing another donation. Please wait a minute and try again.';
+      case 'invalid_payload':
+      case 'invalid_json':
       case 'unknown_platform':
         return 'The server rejected the submission. Please contact the researchers.';
       default:
@@ -238,6 +240,8 @@ const FilterPage = ({ parsedData }) => {
       data: donationData,
       deletedRowCounts: finalDeletedCounts,
       parsingErrors: parsingErrors,
+      // Rows removed automatically for being outside the study window (null when no window applies).
+      windowFilter: parserMetadata?.window || null,
       appliedFilters: {
         startDate: startDate || null,
         endDate: endDate || null,
@@ -395,6 +399,14 @@ const FilterPage = ({ parsedData }) => {
         </div>
         <div className="card-body">
           <p>{config.page.filter.intro}</p>
+          {parserMetadata?.window?.totalDropped > 0 && (
+            <div className="alert alert-info" role="status">
+              {(config.page.filter.windowNotice
+                || 'Only data from the last {months} months is kept. {count} rows from before then (or without a readable date) were removed automatically and will not be donated.')
+                .replace('{months}', String(parserMetadata.window.months))
+                .replace('{count}', parserMetadata.window.totalDropped.toLocaleString())}
+            </div>
+          )}
           <p>
             <button type="button" className="btn btn-link p-0" onClick={() => startFilterTour({ force: true })}>
               Take a quick tour of this page
