@@ -88,6 +88,18 @@ Cross-cutting rules:
 - Automatic removal of internal application fields
 - Complete tracking of user deletions
 - Metadata generation for transparency
+- **Browser-side encryption (opt-in)**: set `"encryptInBrowser": true` in a platform's
+  `general` config and the donation is sealed in the participant's browser to the
+  study's public key (libsodium sealed box) before it is sent, so the server and host
+  never see plaintext. The stored format is the same `enc:v1:` string the server's own
+  at-rest encryption produces, so `server/donation_crypto.py decrypt` opens both. The
+  public key is read from `GET /datadonation/submit` (the key the server encrypts with).
+  It fails closed: if the browser cannot encrypt, nothing is sent. **Trade-off:** the
+  server can no longer validate the *contents* of an encrypted donation (only the
+  envelope and a client-reported table/row summary), so check data after decrypting.
+  Once every platform has it on, set `ACCEPT_PLAINTEXT=0` on the API to refuse plaintext.
+  Base64 makes the request ~1.33x the data, so an 80 MiB limit holds ~60 MiB of data.
+  Off by default.
 
 ### Data Export Structure
 When users click "Yes, donate", a JSON file is automatically downloaded containing:

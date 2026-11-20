@@ -12,8 +12,13 @@ the server re-checks the shape and bounds of everything it stores:
   * the submission id has the format the app generates.
 
 Totals are counted here, never taken from the client's own `metadata`.
+
+Encrypted envelopes (opt-in browser-side encryption) are validated separately, see
+`validate_envelope`: the server cannot see inside them.
 """
 
+import base64
+import binascii
 import json
 import math
 import re
@@ -123,3 +128,62 @@ def validate_donation(donation, platform):
         if total_rows > MAX_TOTAL_ROWS:
             raise PayloadError("too many rows in total")
     return len(data), total_rows
+
+
+# --- Encrypted envelopes (browser-side encryption, see src/utils/encryptDonation.js) ---
+# The browser seals the whole package to the study's public key, so the server cannot
+# look inside. It validates the envelope and a CLIENT-REPORTED summary of table names and
+# row counts; the contents can only be checked after decryption with the offline key.
+
+ENVELOPE_KEYS = {"v", "submissionId", "summary", "payload"}
+SEALED_PREFIX = "enc:v1:"
+SEALED_BOX_OVERHEAD = 48  # libsodium crypto_box_seal: 32-byte ephemeral key + 16-byte MAC
+
+
+def _is_count(value):
+    return type(value) is int and 0 <= value <= MAX_TOTAL_ROWS
+
+
+def validate_envelope(envelope, platform, max_payload_chars):
+    """Validate an encrypted envelope; return the client-reported (tables, rows).
+
+    Raises PayloadError on anything unacceptable.
+    """
+    if type(envelope) is not dict or set(envelope) != ENVELOPE_KEYS:
+        raise PayloadError("envelope is not an object with exactly v, submissionId, summary, payload")
+    if type(envelope["v"]) is not int or envelope["v"] != 1:
+        raise PayloadError("unsupported envelope version")
+
+    submission_id = envelope["submissionId"]
+    if type(submission_id) is not str or not SUBMISSION_ID_RE.match(submission_id):
+        raise PayloadError("submissionId is missing or not a 16-digit string")
+
+    summary = envelope["summary"]
+    if type(summary) is not dict or set(summary) != {"tables", "totalRows"}:
+        raise PayloadError("summary is not an object with exactly tables and totalRows")
+    tables = summary["tables"]
+    if type(tables) is not dict or len(tables) > MAX_TABLES:
+        raise PayloadError("summary.tables is not an object, or has too many tables")
+    allowed = KNOWN_TABLES.get(platform)
+    total = 0
+    for name, count in tables.items():
+        if type(name) is not str or len(name) > MAX_TABLE_NAME_LEN:
+            raise PayloadError("bad table name in summary")
+        if allowed is not None and name not in allowed:
+            raise PayloadError(f"table {name[:60]!r} is not known for platform {platform!r}")
+        if not _is_count(count):
+            raise PayloadError("bad row count in summary")
+        total += count
+    if total > MAX_TOTAL_ROWS or not _is_count(summary["totalRows"]) or summary["totalRows"] != total:
+        raise PayloadError("summary totalRows is inconsistent or too large")
+
+    payload = envelope["payload"]
+    if type(payload) is not str or not payload.startswith(SEALED_PREFIX) or len(payload) > max_payload_chars:
+        raise PayloadError("payload is not an enc:v1: string of acceptable size")
+    try:
+        sealed = base64.b64decode(payload[len(SEALED_PREFIX):], validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise PayloadError("payload is not valid base64") from exc
+    if len(sealed) <= SEALED_BOX_OVERHEAD:
+        raise PayloadError("payload is too short to be a sealed box")
+    return len(tables), total
