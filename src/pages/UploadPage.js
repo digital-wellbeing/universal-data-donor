@@ -10,7 +10,7 @@ import { useConfig } from '../ConfigContext';
 
 const UploadPage = ({ setParsedData }) => {
   const config = useConfig();
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]); // one entry, or several for multi-part exports
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(null); // whole percent, for streaming parsers
   const [parsingWarning, setParsingWarning] = useState(null);
@@ -22,9 +22,9 @@ const UploadPage = ({ setParsedData }) => {
   }
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length > 0) {
+      setFiles(selectedFiles);
       // Reset warning and cached data when new file is selected
       setParsingWarning(null);
       setParsedDataCache(null);
@@ -33,18 +33,21 @@ const UploadPage = ({ setParsedData }) => {
 
 
   const handleProceed = async () => {
-    if (file) {
+    if (files.length > 0) {
       setLoading(true);
       try {
         // Dynamically load the parser based on config
         const parser = await getParser(config.general.parser);
-        // Parse the file before navigating
+        // Parse the file(s) before navigating
         setProgress(null);
+        // Multi-part exports (Google Takeout) hand every file to the parser at once.
+        const input = config.general.multipleFiles ? files : files[0];
         // Streaming parsers (large wearable exports) report a 0..1 fraction.
-        const parseResult = await parser(file, (fraction) => {
+        // `parserOptions` carries per-platform parameters from the config (e.g. the time window).
+        const parseResult = await parser(input, (fraction) => {
           const pct = Math.min(100, Math.floor(fraction * 100));
           setProgress((prev) => (prev === pct ? prev : pct));
-        });
+        }, config.general.parserOptions);
         const parsed = parseResult.data;
         const parsingErrors = parseResult.parsingErrors;
         
@@ -88,7 +91,8 @@ const UploadPage = ({ setParsedData }) => {
         setParsedData({ 
           data: processedData, 
           selectionModel: initialSelection,
-          parsingErrors: parsingErrors
+          parsingErrors: parsingErrors,
+          parserMetadata: parseResult.metadata || null
         });
         
         // Navigate to filter page only after parsing is complete
@@ -108,7 +112,7 @@ const UploadPage = ({ setParsedData }) => {
   const handleTryAgain = () => {
     setParsingWarning(null);
     setParsedDataCache(null);
-    setFile(null);
+    setFiles([]);
   };
 
   return (
@@ -132,13 +136,14 @@ const UploadPage = ({ setParsedData }) => {
                 type="file"
                 hidden
                 onChange={handleFileChange}
+                multiple={Boolean(config.general.multipleFiles)}
                 accept={config.general.fileExtensions.join(',')}
               />
             </Button>
           </div>
-          {file && !parsingWarning && (
+          {files.length > 0 && !parsingWarning && (
             <div className="alert alert-info mt-3">
-              {config.page.upload.selectedFile} {file.name}
+              {config.page.upload.selectedFile} {files.map((f) => f.name).join(', ')}
             </div>
           )}
           {loading && (
@@ -206,7 +211,7 @@ const UploadPage = ({ setParsedData }) => {
               data-testid="proceed-button"
               className="btn btn-primary mt-3"
               onClick={handleProceed}
-              disabled={!file || loading || parsingWarning}
+              disabled={files.length === 0 || loading || parsingWarning}
               variant="contained"
               sx={{ display: 'block', width: 'fit-content' }}
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}

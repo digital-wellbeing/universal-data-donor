@@ -70,7 +70,7 @@ RATE_WINDOW = int(os.environ.get("RATE_WINDOW", "3600"))
 DONATION_PUBLIC_KEY = os.environ.get("DONATION_PUBLIC_KEY", "").strip()
 REQUIRE_ENCRYPTION = os.environ.get("REQUIRE_ENCRYPTION", "") == "1"
 XFF_TRUSTED_HOPS = max(0, int(os.environ.get("XFF_TRUSTED_HOPS", "0")))
-ALLOWED_PLATFORMS = {"playstation", "android", "activitywatch", "googlefit", "garmin", "applehealth", "healthconnect", "fitbit", "samsunghealth", "instagram"}
+ALLOWED_PLATFORMS = {"playstation", "android", "activitywatch", "googlefit", "garmin", "applehealth", "healthconnect", "fitbit", "samsunghealth", "instagram", "googletakeout"}
 
 if REQUIRE_ENCRYPTION and not DONATION_PUBLIC_KEY:
     raise SystemExit("REQUIRE_ENCRYPTION=1 but DONATION_PUBLIC_KEY is not set")
@@ -79,6 +79,11 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_BYTES
 
 _write_lock = threading.Lock()
+
+# An upload costs ~12x its body in RAM (parse + re-serialise + encrypt; measured),
+# so only this many are processed at once. Others get 503 and the client retries.
+MAX_CONCURRENT_SUBMITS = max(1, int(os.environ.get("MAX_CONCURRENT_SUBMITS", "1")))
+_submit_slots = threading.BoundedSemaphore(MAX_CONCURRENT_SUBMITS)
 
 
 def _connect():
@@ -202,6 +207,16 @@ def submit():
     if not verify_turnstile(token, ip):
         return jsonify(ok=False, error="captcha_failed"), 403
 
+    # Reading and parsing the body is the memory-heavy part: gate it.
+    if not _submit_slots.acquire(blocking=False):
+        return jsonify(ok=False, error="server_busy"), 503
+    try:
+        return _handle_body(ip_hash_value)
+    finally:
+        _submit_slots.release()
+
+
+def _handle_body(ip_hash_value):
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
         return jsonify(ok=False, error="invalid_json"), 400
