@@ -103,7 +103,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
 
   // Only these platforms are shown on the homepage. The others remain fully
   // functional via a direct ?platform=<id> URL — add an id here to re-enable it.
-  const ENABLED_PLATFORM_IDS = ['activitywatch', 'googlefit', 'garmin', 'applehealth', 'healthconnect', 'fitbit', 'samsunghealth', 'instagram'];
+  const ENABLED_PLATFORM_IDS = ['activitywatch', 'googlefit', 'googletakeout', 'garmin', 'applehealth', 'healthconnect', 'fitbit', 'samsunghealth', 'instagram'];
   const visiblePlatforms = platforms.filter((p) => ENABLED_PLATFORM_IDS.includes(p.id));
 
   const handlePlatformClick = (platformId) => {
