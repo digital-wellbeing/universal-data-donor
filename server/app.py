@@ -21,6 +21,17 @@ Config via environment (all optional; safe test defaults for local dev):
   MAX_BYTES         Max request body size (default 25 MiB).
   RATE_MAX          Max accepted submissions per IP per window (default 5).
   RATE_WINDOW       Rate-limit window in seconds (default 3600).
+  STORAGE_BACKEND   sqlite (default) or mysql. With mysql, donations go to the MySQL server
+                    configured below (schema: mysql_schema.sql); only ciphertext is ever
+                    stored there, so it requires REQUIRE_ENCRYPTION=1 and DONATION_PUBLIC_KEY.
+  MYSQL_HOST, MYSQL_PORT (3306), MYSQL_DATABASE, MYSQL_USER
+                    Where and as whom. The account needs only SELECT and INSERT on the two
+                    datadonation_* tables.
+  MYSQL_PASSWORD / MYSQL_PASSWORD_FILE
+                    The password, or a file holding it (the file wins).
+  MYSQL_SSL_MODE    required (default: encrypted, certificate not verified), verify-ca,
+                    verify-full (also checks the host name) or off (tests only).
+  MYSQL_CA_FILE     CA bundle for verify-*; defaults to the system store.
   ACCEPT_PLAINTEXT  Default 1. Set to 0 once browser-side encryption is on for every
                     platform (general.encryptInBrowser in the platform configs) to refuse
                     plaintext donations, so nothing can bypass it.
@@ -59,6 +70,7 @@ import urllib.request
 from flask import Flask, request, jsonify
 
 from donation_crypto import encrypt_payload
+from storage import DuplicateSubmission, SqliteStore, StorageError, mysql_store_from_env
 from validation import PayloadError, validate_donation, validate_envelope
 
 DONATION_DB = os.environ.get("DONATION_DB", os.path.join(os.path.dirname(__file__), "donations.sqlite"))
@@ -83,6 +95,7 @@ DONATION_PUBLIC_KEY = os.environ.get("DONATION_PUBLIC_KEY", "").strip()
 REQUIRE_ENCRYPTION = os.environ.get("REQUIRE_ENCRYPTION", "") == "1"
 XFF_TRUSTED_HOPS = max(0, int(os.environ.get("XFF_TRUSTED_HOPS", "0")))
 ALLOWED_PLATFORMS = {"playstation", "android", "activitywatch", "googlefit", "garmin", "applehealth", "healthconnect", "fitbit", "samsunghealth", "instagram", "googletakeout"}
+STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND", "sqlite").strip().lower()
 
 if REQUIRE_ENCRYPTION and not DONATION_PUBLIC_KEY:
     raise SystemExit("REQUIRE_ENCRYPTION=1 but DONATION_PUBLIC_KEY is not set")
@@ -132,6 +145,23 @@ def init_db():
         )
         c.execute("CREATE INDEX IF NOT EXISTS idx_rate_events ON rate_events (ip_hash, ts)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_donations_submission ON donations (submission_id)")
+
+
+def build_store():
+    if STORAGE_BACKEND == "sqlite":
+        return SqliteStore(_connect, _write_lock)
+    if STORAGE_BACKEND != "mysql":
+        raise SystemExit(f"STORAGE_BACKEND must be sqlite or mysql, got {STORAGE_BACKEND!r}")
+    if not (REQUIRE_ENCRYPTION and DONATION_PUBLIC_KEY):
+        raise SystemExit("STORAGE_BACKEND=mysql requires REQUIRE_ENCRYPTION=1 and DONATION_PUBLIC_KEY: "
+                         "the MySQL server must only ever hold ciphertext")
+    try:
+        return mysql_store_from_env(os.environ)
+    except (ValueError, OSError) as exc:
+        raise SystemExit(f"STORAGE_BACKEND=mysql: {exc}") from exc
+
+
+store = build_store()
 
 
 def storage_ok(incoming_bytes=0):
@@ -227,7 +257,13 @@ def rate_ok(ip_hash_value):
 def health():
     # Doubles as the alert hook: the container healthcheck (and any uptime monitor
     # polling this URL) turns unhealthy when the data volume is nearly full.
-    if not storage_ok():
+    if store.name == "mysql":
+        try:
+            store.ping()
+        except StorageError as exc:  # unreachable, access denied, table missing...
+            app.logger.error("Health: %s", exc)
+            return jsonify(ok=False, error="storage_unavailable"), 503
+    elif not storage_ok():
         app.logger.error("Health: storage is low (free space below MIN_FREE_BYTES or DB over MAX_DB_BYTES)")
         return jsonify(ok=False, error="storage_low"), 503
     info = {"ok": True, "service": "datadonation-submit"}
@@ -250,7 +286,7 @@ def submit():
         return jsonify(ok=False, error="captcha_failed"), 403
 
     # Do not read a large body onto a volume that cannot hold it.
-    if not storage_ok(request.content_length or 0):
+    if store.name == "sqlite" and not storage_ok(request.content_length or 0):
         app.logger.error("Refusing a donation: storage is low")
         return jsonify(ok=False, error="storage_low"), 503
 
@@ -308,30 +344,22 @@ def _handle_body(ip_hash_value):
         stored_payload = encrypt_payload(payload_json, DONATION_PUBLIC_KEY) if DONATION_PUBLIC_KEY else payload_json
         submission_id = donation["submissionId"]
 
-    with _write_lock, _connect() as c:
-        # A submission id is the participant's handle for withdrawal: never let a
-        # second package overwrite or shadow an existing one.
-        if c.execute("SELECT 1 FROM donations WHERE submission_id = ?", (submission_id,)).fetchone():
-            return jsonify(ok=False, error="duplicate_submission"), 409
-        cur = c.execute(
-            """
-            INSERT INTO donations
-                (submission_id, platform, received_at, ip_hash, user_agent,
-                 total_tables, total_rows, payload)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                submission_id,
-                platform,
-                received_at,
-                ip_hash_value,
-                (request.headers.get("User-Agent") or "")[:300],
-                total_tables,
-                total_rows,
-                stored_payload,
-            ),
+    try:
+        row_id = store.add(
+            submission_id=submission_id,
+            platform=platform,
+            received_at=received_at,
+            ip_hash=ip_hash_value,
+            user_agent=(request.headers.get("User-Agent") or "")[:300],
+            total_tables=total_tables,
+            total_rows=total_rows,
+            payload=stored_payload,
         )
-        row_id = cur.lastrowid
+    except DuplicateSubmission:
+        return jsonify(ok=False, error="duplicate_submission"), 409
+    except StorageError as exc:
+        app.logger.error("Could not store a %s donation: %s", platform, exc)
+        return jsonify(ok=False, error="storage_unavailable"), 503
 
     return jsonify(ok=True, id=row_id, submissionId=submission_id)
 
