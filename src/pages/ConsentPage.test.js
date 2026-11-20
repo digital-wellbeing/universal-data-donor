@@ -51,15 +51,28 @@ describe('Google Takeout consent (real config)', () => {
     renderWith(config);
     const scope = screen.getByTestId('data-scope');
 
-    // The services the Takeout parser looks for (Fit, Google Health/Fitbit, Play Games, YouTube).
-    ['Fit', 'Google Health (or Fitbit)', 'Google Play Games Services', 'YouTube and YouTube Music'].forEach((name) => {
+    // The services the Takeout parser looks for (Fit, Google Health/Fitbit, Play Games, YouTube),
+    // plus Play Movies & TV, which can be in the download but is not read.
+    ['Fit', 'Google Health (or Fitbit)', 'Google Play Games Services', 'Google Play Movies & TV', 'YouTube and YouTube Music'].forEach((name) => {
       expect(within(scope).getByText(name)).toBeInTheDocument();
     });
-    expect(within(scope).getAllByText('Not read:')).toHaveLength(4);
+    expect(within(scope).getAllByText('Not read:')).toHaveLength(5);
 
     expect(scope).toHaveTextContent(/only the data listed under "Read" is used/);
-    expect(scope).toHaveTextContent(/other services as well \(for example Google Play Movies & TV\)/);
+    expect(scope).toHaveTextContent(/other services as well\. This tool does not read them/);
     expect(scope).toHaveTextContent(/never opened, and nothing from them is donated/);
+  });
+
+  test('lists Google Play Movies & TV explicitly and says nothing is read from it', () => {
+    renderWith(config);
+    const scope = screen.getByTestId('data-scope');
+    const entry = within(scope).getByText('Google Play Movies & TV').closest('li');
+    expect(entry).toHaveTextContent(/Read: nothing\. It can be part of your download, but this tool does not read it\./);
+    expect(entry).toHaveTextContent(/None of it is used or donated/);
+  });
+
+  test('the upload instructions also say Play Movies & TV is ignored', () => {
+    expect(config.page.upload.intro).toMatch(/Google Play Movies & TV[^.]*ignored/);
   });
 
   test('promises that location and YouTube titles/links are not collected, as the parsers guarantee', () => {
