@@ -7,6 +7,7 @@ import { useConfig } from '../ConfigContext';
 import TurnstileWidget from '../components/TurnstileWidget';
 import { startFilterTour, hasSeenFilterTour } from '../components/filterTour';
 import postWithProgress from '../utils/postWithProgress';
+import { buildSubmissionBody } from '../utils/encryptDonation';
 
 // Keys that are internal bookkeeping and must never be shown as columns or
 // included in the donated data. `id`/`selected` are added by UploadPage; any
@@ -207,6 +208,8 @@ const FilterPage = ({ parsedData }) => {
         return 'The server cannot accept donations right now. Please try again later, or contact the researchers.';
       case 'duplicate_submission':
         return 'This donation was already received. Please contact the researchers if you think this is a mistake.';
+      case 'encryption_required':
+        return 'Donations must now be encrypted in your browser. Please reload this page and try again.';
       case 'invalid_payload':
       case 'invalid_json':
       case 'unknown_platform':
@@ -293,7 +296,20 @@ const FilterPage = ({ parsedData }) => {
         setSubmitError('Please complete the “I’m human” check below before donating.');
         return;
       }
-      const body = JSON.stringify({ platform: platformId, donation: donationPackage });
+      let body;
+      try {
+        // With general.encryptInBrowser the package is sealed in this browser and the
+        // server never sees plaintext. If that fails, never fall back to plaintext.
+        body = await buildSubmissionBody({
+          platformId,
+          donationPackage,
+          submitUrl,
+          encryptInBrowser: Boolean(config?.general?.encryptInBrowser),
+        });
+      } catch (e) {
+        setSubmitError('Your donation could not be encrypted in your browser, so nothing was sent. Please try again, or contact the researchers.');
+        return;
+      }
       const bodyBytes = new Blob([body]).size;
       if (bodyBytes > maxDonationBytes) {
         setSubmitError(tooLargeMessage(bodyBytes));

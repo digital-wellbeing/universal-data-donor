@@ -21,6 +21,9 @@ Config via environment (all optional; safe test defaults for local dev):
   MAX_BYTES         Max request body size (default 25 MiB).
   RATE_MAX          Max accepted submissions per IP per window (default 5).
   RATE_WINDOW       Rate-limit window in seconds (default 3600).
+  ACCEPT_PLAINTEXT  Default 1. Set to 0 once browser-side encryption is on for every
+                    platform (general.encryptInBrowser in the platform configs) to refuse
+                    plaintext donations, so nothing can bypass it.
   MIN_FREE_BYTES    Refuse donations (and report unhealthy) when the data volume has
                     less than this much free space, counting twice the incoming body
                     (default 2 GiB). Fails closed if the volume cannot be inspected.
@@ -56,7 +59,7 @@ import urllib.request
 from flask import Flask, request, jsonify
 
 from donation_crypto import encrypt_payload
-from validation import PayloadError, validate_donation
+from validation import PayloadError, validate_donation, validate_envelope
 
 DONATION_DB = os.environ.get("DONATION_DB", os.path.join(os.path.dirname(__file__), "donations.sqlite"))
 # Cloudflare's documented "always passes" test secret. Override in production.
@@ -71,6 +74,7 @@ TURNSTILE_HOSTNAMES = {
 }
 IP_SALT = os.environ.get("IP_SALT", "dev-insecure-salt-change-me")
 MAX_BYTES = int(os.environ.get("MAX_BYTES", 25 * 1024 * 1024))
+ACCEPT_PLAINTEXT = os.environ.get("ACCEPT_PLAINTEXT", "1") != "0"
 MIN_FREE_BYTES = int(os.environ.get("MIN_FREE_BYTES", str(2 * 1024 ** 3)))
 MAX_DB_BYTES = int(os.environ.get("MAX_DB_BYTES", "0"))
 RATE_MAX = int(os.environ.get("RATE_MAX", "5"))
@@ -226,7 +230,12 @@ def health():
     if not storage_ok():
         app.logger.error("Health: storage is low (free space below MIN_FREE_BYTES or DB over MAX_DB_BYTES)")
         return jsonify(ok=False, error="storage_low"), 503
-    return jsonify(ok=True, service="datadonation-submit")
+    info = {"ok": True, "service": "datadonation-submit"}
+    if DONATION_PUBLIC_KEY:
+        # Public by design: the browser seals donations to it when browser-side
+        # encryption is enabled. Served here so there is one source of truth.
+        info["publicKey"] = DONATION_PUBLIC_KEY
+    return jsonify(info)
 
 
 @app.post("/datadonation/submit")
@@ -265,23 +274,40 @@ def _handle_body(ip_hash_value):
 
     # 3) Validate the donation payload: a known platform, then a strictly checked
     #    shape (see validation.py). Totals are counted here, not taken from the client.
-    donation = body.get("donation")
     platform = str(body.get("platform") or "").lower()
     if platform not in ALLOWED_PLATFORMS:
         return jsonify(ok=False, error="unknown_platform"), 400
-    try:
-        total_tables, total_rows = validate_donation(donation, platform)
-    except PayloadError as exc:
-        # Log why (no payload content), tell the caller only that it was invalid.
-        app.logger.warning("Rejected a %s donation: %s", platform, exc)
-        return jsonify(ok=False, error="invalid_payload"), 400
-
     received_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    payload_json = json.dumps(donation, ensure_ascii=False)
-    stored_payload = encrypt_payload(payload_json, DONATION_PUBLIC_KEY) if DONATION_PUBLIC_KEY else payload_json
+    if "encrypted" in body:
+        # Browser-side encrypted donation: the server cannot see inside it. It stores
+        # the sealed payload as-is (same enc:v1: format as server-side encryption);
+        # totals are the client's own summary, not independently counted.
+        if "donation" in body:
+            return jsonify(ok=False, error="invalid_payload"), 400
+        try:
+            total_tables, total_rows = validate_envelope(body["encrypted"], platform, MAX_BYTES)
+        except PayloadError as exc:
+            app.logger.warning("Rejected a %s encrypted donation: %s", platform, exc)
+            return jsonify(ok=False, error="invalid_payload"), 400
+        submission_id = body["encrypted"]["submissionId"]
+        stored_payload = body["encrypted"]["payload"]
+    else:
+        if not ACCEPT_PLAINTEXT:
+            return jsonify(ok=False, error="encryption_required"), 400
+        # Strictly validate the plaintext package (see validation.py). Totals are
+        # counted here, not taken from the client.
+        donation = body.get("donation")
+        try:
+            total_tables, total_rows = validate_donation(donation, platform)
+        except PayloadError as exc:
+            # Log why (no payload content), tell the caller only that it was invalid.
+            app.logger.warning("Rejected a %s donation: %s", platform, exc)
+            return jsonify(ok=False, error="invalid_payload"), 400
+        payload_json = json.dumps(donation, ensure_ascii=False)
+        stored_payload = encrypt_payload(payload_json, DONATION_PUBLIC_KEY) if DONATION_PUBLIC_KEY else payload_json
+        submission_id = donation["submissionId"]
 
-    submission_id = donation["submissionId"]
     with _write_lock, _connect() as c:
         # A submission id is the participant's handle for withdrawal: never let a
         # second package overwrite or shadow an existing one.

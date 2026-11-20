@@ -84,3 +84,54 @@ def test_oversized_non_data_fields_are_rejected(monkeypatch):
     monkeypatch.setattr(validation, "MAX_NON_DATA_BYTES", 50)
     with pytest.raises(PayloadError):
         validate_donation(donation({"T": []}, parsingErrors={"x": "y" * 100}), "garmin")
+
+
+# --- encrypted envelopes (browser-side encryption) ---
+
+import base64
+
+from validation import validate_envelope
+
+SEALED = "enc:v1:" + base64.b64encode(b"x" * 100).decode()
+
+
+def envelope(**over):
+    base = {"v": 1, "submissionId": SID, "summary": {"tables": {"T": 2}, "totalRows": 2}, "payload": SEALED}
+    base.update(over)
+    return base
+
+
+def test_valid_envelope_returns_the_reported_counts():
+    assert validate_envelope(envelope(), "garmin", 10_000) == (1, 2)
+
+
+@pytest.mark.parametrize("bad", [
+    envelope(v=2),
+    envelope(v=True),
+    envelope(submissionId="123"),
+    envelope(payload="not-prefixed"),
+    envelope(payload="enc:v1:" + "!!!not base64!!!"),
+    envelope(payload="enc:v1:" + base64.b64encode(b"x" * 48).decode()),  # only the overhead: nothing inside
+    envelope(summary={"tables": {"T": 2}, "totalRows": 3}),               # inconsistent total
+    envelope(summary={"tables": {"T": -1}, "totalRows": -1}),
+    envelope(summary={"tables": {"T": True}, "totalRows": 1}),
+    envelope(summary={"tables": {"T": 2}}),                               # missing totalRows
+    {**envelope(), "extra": 1},
+    "a string", None, [],
+])
+def test_bad_envelopes_are_rejected(bad):
+    with pytest.raises(PayloadError):
+        validate_envelope(bad, "garmin", 10_000)
+
+
+def test_envelope_payload_size_is_capped():
+    with pytest.raises(PayloadError):
+        validate_envelope(envelope(), "garmin", 50)
+
+
+def test_envelope_table_names_follow_the_platform_allow_list():
+    ok = envelope(summary={"tables": {"Google Fit - Raw Steps": 1}, "totalRows": 1})
+    assert validate_envelope(ok, "googletakeout", 10_000) == (1, 1)
+    bad = envelope(summary={"tables": {"Injected": 1}, "totalRows": 1})
+    with pytest.raises(PayloadError):
+        validate_envelope(bad, "googletakeout", 10_000)
