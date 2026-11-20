@@ -90,6 +90,14 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       logo: '/instagram-logo.svg',
       description: 'Donate counts of your Instagram activity (no content)',
       color: '#C13584'
+    },
+    {
+      id: 'googletakeout',
+      group: 'screen',
+      name: 'Google Takeout',
+      logo: '/googletakeout-logo.svg',
+      description: 'Donate recent YouTube viewing times and Google health & gaming data',
+      color: '#1A73E8'
     }
   ];
 
