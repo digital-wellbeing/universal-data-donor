@@ -86,7 +86,10 @@ if [ ! -x "$RUNNER_DIR/config.sh" ] || ! grep -q "$RUNNER_VERSION" "$RUNNER_DIR/
   tarball="$(mktemp)"
   curl -fsSL -o "$tarball" "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
   echo "$RUNNER_SHA256  $tarball" | sha256sum -c --quiet - || { echo "ABORT: runner checksum mismatch." >&2; exit 1; }
-  sudo -u "$RUNNER_USER" tar -xzf "$tarball" -C "$RUNNER_DIR"
+  # Extract as root (mktemp made the tarball root-only), then hand it over.
+  tar -xzf "$tarball" -C "$RUNNER_DIR"
+  chown -R "$RUNNER_USER:$RUNNER_USER" "$RUNNER_DIR"
+  chmod 0750 "$RUNNER_DIR"   # the tarball's "./" entry resets it to 0755
   rm -f "$tarball"
   echo "$RUNNER_VERSION" | sudo -u "$RUNNER_USER" tee "$RUNNER_DIR/.runner-version" >/dev/null
   "$RUNNER_DIR/bin/installdependencies.sh" >/dev/null
