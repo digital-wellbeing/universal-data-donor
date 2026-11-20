@@ -1,10 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-import JSZip from 'jszip';
 import parseGoogleTakeout from './googleTakeoutParser';
 import validateGoogleTakeout from '../validators/googleTakeoutValidator';
 import {
-  htmlEntry, page, at, makeFile,
+  htmlEntry, page, at, makeFile, playGamesFiles,
 } from './__fixtures__/takeoutBuilders';
 
 // Reference time: the window start is 2026-05-20 for the default 6 months.
@@ -51,15 +48,8 @@ const healthFiles = {
   [`${GH}Steps/steps_2025-01-01.csv`]: csv('timestamp,steps,data source', ['2025-01-02T09:00:00.000Z,1000,Google Health App']),
 };
 
-// Play Games: the zip already committed in tests/ (real structure, Sep-Oct 2025 data).
-const loadPlayGamesFiles = async () => {
-  const bytes = fs.readFileSync(path.resolve(__dirname, '../../tests/takeout-20251120T161555Z-3-001_html.zip'));
-  const zip = await JSZip.loadAsync(bytes);
-  const out = {};
-  await Promise.all(Object.keys(zip.files).filter((n) => !zip.files[n].dir)
-    .map(async (n) => { out[n] = await zip.files[n].async('uint8array'); }));
-  return out;
-};
+// Play Games: synthetic files (real exports hold personal data, so none is committed).
+const loadPlayGamesFiles = async () => playGamesFiles();
 
 const healthZip = () => makeFile({ ...fitFiles, ...healthFiles });
 const everythingZip = async () => makeFile({ ...fitFiles, ...healthFiles, ...(await loadPlayGamesFiles()) });

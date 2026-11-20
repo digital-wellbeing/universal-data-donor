@@ -1,14 +1,42 @@
 import parseAndroidFile from './androidParser';
-import fs from 'fs';
-import path from 'path';
+import JSZip from 'jszip';
+
+// Synthetic Play Games Takeout (HTML), built per test: real exports hold personal data.
+const PLAYTIME_HTML = `
+  <table class="mdl-data-table">
+    <tr>
+      <td>Sep 30, 2025</td>
+      <td>
+        <table class="mdl-data-table inner-table">
+          <tr><th>Package Name</th><th>Duration</th><th>First Session Start</th><th>Last Session End</th><th>Number of Sessions</th></tr>
+          <tr>
+            <td>com.example.game</td><td>30 minutes</td>
+            <td>September 30, 2025 at 10:00:00 AM GMT+1</td><td>September 30, 2025 at 10:30:00 AM GMT+1</td><td>1</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>`;
+const activityHtml = (first, last) => `
+  <table class="mdl-data-table">
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Time First Played</td><td>${first}</td></tr>
+    <tr><td>Time Last Played</td><td>${last}</td></tr>
+  </table>`;
+
+const makePlayGamesFile = async () => {
+  const zip = new JSZip();
+  const root = zip.folder('Takeout').folder('Google Play Games Services');
+  root.folder('Global').file('Playtime.html', PLAYTIME_HTML);
+  root.folder('Games').folder('Synthetic Game One').file('Activity.html', activityHtml('2015-07-06T07:13:22Z', '2015-10-16T11:30:27Z'));
+  root.folder('Games').folder('Synthetic Game Two').file('Activity.html', activityHtml('2016-01-02T08:00:00Z', '2016-02-03T09:30:00Z'));
+  const bytes = await zip.generateAsync({ type: 'uint8array' });
+  return new File([bytes], 'takeout.zip', { type: 'application/zip' });
+};
 
 describe('androidParser', () => {
   it('should parse Google Takeout ZIP file with both playtime and game activity data', async () => {
-    const filePath = path.resolve(__dirname, '../../tests/takeout-20251120T161555Z-3-001_html.zip');
-
-    // Read the file as a Blob-like object for testing
-    const fileBuffer = fs.readFileSync(filePath);
-    const file = new File([fileBuffer], 'takeout.zip', { type: 'application/zip' });
+    const file = await makePlayGamesFile();
 
     const parseResult = await parseAndroidFile(file);
 
@@ -55,10 +83,7 @@ describe('androidParser', () => {
   });
 
   it('should parse game activity from HTML files correctly', async () => {
-    const filePath = path.resolve(__dirname, '../../tests/takeout-20251120T161555Z-3-001_html.zip');
-
-    const fileBuffer = fs.readFileSync(filePath);
-    const file = new File([fileBuffer], 'takeout.zip', { type: 'application/zip' });
+    const file = await makePlayGamesFile();
 
     const parseResult = await parseAndroidFile(file);
     const gameActivity = parseResult.data['Game Activity'];
@@ -90,10 +115,7 @@ describe('androidParser', () => {
   });
 
   it('should track parsing errors correctly', async () => {
-    const filePath = path.resolve(__dirname, '../../tests/takeout-20251120T161555Z-3-001_html.zip');
-
-    const fileBuffer = fs.readFileSync(filePath);
-    const file = new File([fileBuffer], 'takeout.zip', { type: 'application/zip' });
+    const file = await makePlayGamesFile();
 
     const parseResult = await parseAndroidFile(file);
 
