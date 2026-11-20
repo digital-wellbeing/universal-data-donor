@@ -24,7 +24,7 @@
   "page": {
     "consent": {
       "title": "Google Takeout Study",
-      "intro": "You are about to start the process of donating data from your Google Takeout export to our study. We ask for your recent screen time (YouTube viewing times) and health and activity data (Google Fit, Google Health and Google Play Games playtime). The data will be used for academic research on screen time, physical activity and wellbeing.",
+      "intro": "You are about to start the process of donating data from your Google Takeout export to our study. We ask for your recent screen time (YouTube viewing times) and health and activity data (Google Fit, Google Health and Google Play Games playtime). For Google Fit this includes the individual timestamped samples of heart rate, steps, distance, calories, activity type and sleep stages, not only daily totals, and we do not read or collect your location. The data will be used for academic research on screen time, physical activity and wellbeing.",
       "process": "We will walk you through this process step by step. During this process no data is stored or sent to a server. Only data from the last 6 months is kept; anything older is removed automatically on your own computer. YouTube video titles, channels, links and search terms are never read into the donation, only when you watched or searched. You can also delete rows before donating. Data will only be donated and stored when you click the button \"Yes, donate\" on the page that shows your data.",
       "donationAgreement": "By clicking the button \"Yes, donate\":",
       "agreementPoints": [
@@ -63,9 +63,9 @@
       "loading": "Loading...",
       "loadingData": "Loading data...",
       "dataOverview": "Data overview",
-      "intro": "Determine whether you would like to donate the data below. Carefully check the data and adjust when required. You can filter by date range and delete specific rows. With your donation you contribute to the previously described research. Thank you in advance.",
-      "excludeLabel": "Exclude activity types",
-      "excludePlaceholder": "Select activity types to remove",
+      "intro": "Determine whether you would like to donate the data below. Carefully check the data and adjust when required. You can filter by date range, exclude specific activity types or data streams, and delete specific rows. With your donation you contribute to the previously described research. Thank you in advance.",
+      "excludeLabel": "Exclude activity types or data streams",
+      "excludePlaceholder": "Select activity types or data streams to remove",
       "deleteSelectedRows": "Delete selected rows",
       "donationPrompt": "Do you want to donate the above data?",
       "donateButton": "Yes, donate",
