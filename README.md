@@ -6,6 +6,7 @@ A React application that allows users to donate their gaming platform data for a
 - **PlayStation** data exports (.xlsx)
 - **Google Play Games Services** data from Google Takeout (.zip)
 - **ActivityWatch** exports
+- **Google Takeout** (all parts at once): Fit, Google Health/Fitbit, Play Games, Play Movies & TV and YouTube — see [Wearable & social-media exports](#wearable--social-media-exports)
 - Wearables and social media — see [Wearable & social-media exports](#wearable--social-media-exports)
 
 ## 🚀 Live Demo
@@ -15,6 +16,34 @@ Try the application here:
 - **Google Play Games**: [https://digital-wellbeing.github.io/universal-data-donor/?platform=android](https://digital-wellbeing.github.io/universal-data-donor/?platform=android)
 
 > **Note**: Use the `?platform=` URL parameter to select the platform. Defaults to PlayStation if no parameter is provided.
+
+### Study details in the URL (optional)
+
+Each link can carry the name of the study and its ethics code. They are shown to
+the participant in parentheses on the consent page and recorded in the donation.
+
+| Parameter | Example | Shown as |
+|---|---|---|
+| `study` | `study=Sleep%20and%20Screens` | "…to our study (Sleep and Screens)" |
+| `ethics` | `ethics=ETH-2026-001` | "…to our study (ethics approval: ETH-2026-001)" |
+
+```
+https://digital-wellbeing.github.io/universal-data-donor/?platform=googletakeout&study=Sleep%20and%20Screens&ethics=ETH-2026-001
+→ "You are about to start the process of donating data from your Google Takeout
+   export to our study (Sleep and Screens; ethics approval: ETH-2026-001). …"
+```
+
+- Both are optional and work with every platform; without them the text is unchanged.
+  The details go right after "our study" (or "our <Name> study") in the consent
+  intro, so no per-platform config change is needed. If the intro has no such
+  phrase they are appended to it.
+- They are read once when the page loads (the query string is lost when the app
+  moves from page to page) and saved in the donation package as `studyInfo`
+  (`null` when none was given).
+- They are only a label: anyone can type anything into a URL, so they prove nothing
+  about ethics approval. Values are shown as plain text (never as HTML), stripped of
+  control characters and cut to 120 characters.
+- Code: `src/utils/studyInfo.js`.
 
 ## Features
 
@@ -39,7 +68,7 @@ streams, GPS, profiles, device identifiers or free text.
 | `fitbit` | Google Takeout "Fitbit" / "Google Health" .zip (legacy JSON and 2024–2026 CSV layouts) | Daily Activity, Sleep, Exercise |
 | `samsunghealth` | Samsung Health → Download personal data, folder compressed to .zip | Daily Activity, Sleep, Exercise |
 | `instagram` | Instagram "Download your information" (JSON format) .zip | Daily Activity (counts only), Activity Totals, Topics |
-| `googletakeout` | Google Takeout, **all .zip parts at once**: Fit, Google Health/Fitbit, Play Games Services, YouTube history (HTML or JSON) | Source-labelled tables (`Google Fit - …`, `Google Health - …`, `Play Games - …`, `YouTube - Viewing Sessions` / `Daily Activity`) |
+| `googletakeout` | Google Takeout, **all .zip parts at once**: Fit, Google Health/Fitbit, Play Games Services, Play Movies & TV (watchlist, viewing history), YouTube history (HTML or JSON) | Source-labelled tables (`Google Fit - …`, `Google Health - …`, `Play Games - …`, `Play Movies & TV - Watchlist` / `Viewing History`, `YouTube - Viewing Sessions` / `Daily Activity`) |
 
 Cross-cutting rules:
 - **Overlapping sources are never summed** (phone + watch + mirrored apps all
@@ -64,6 +93,11 @@ Cross-cutting rules:
   at most `youtubeSessionGapMinutes` (default 30) apart. YouTube timestamps
   are read in English only; other languages are reported, not guessed. The
   server's `ALLOWED_PLATFORMS` must include `googletakeout`.
+  **Play Movies & TV** reads only `Watchlist.json` and a viewing-history file
+  (title and date/time; purchases, rentals and ratings are never opened). Its file
+  layout is unverified against a populated export (the available one was empty and
+  has no viewing-history file), so the parser accepts an `{"items": [...]}` object or
+  a bare array and reports entries it cannot recognise.
 - Large uploads report progress; the streaming zip reader (`src/utils/zipReader.js`)
   supports ZIP64 and keeps memory flat (a 700 MB `export.xml` parses in ~5 s
   with a ~60 MB heap).
@@ -107,6 +141,7 @@ When users click "Yes, donate", a JSON file is automatically downloaded containi
 {
   "submissionId": "16-digit-unique-id",
   "timestamp": "ISO-8601-timestamp",
+  "studyInfo": { "study": "Sleep and Screens", "ethics": "ETH-2026-001" }, // null without ?study= / ?ethics=
   "data": {
     "TableName1": [/* remaining user data */],
     "TableName2": [/* remaining user data */]
@@ -265,6 +300,9 @@ once to point Caddy at the containers. Manual deploy or rollback on the host:
 ## Development Notes
 
 ### Recent Updates
+- **Study details in the URL**: optional `?study=` and `?ethics=` parameters appear in parentheses after "our study" on the consent page and are saved as `studyInfo` in the donation (see [Study details in the URL](#study-details-in-the-url-optional))
+- **Play Movies & TV**: the Google Takeout parser now reads the watchlist and viewing history (titles and dates)
+- **Google Takeout logo**: a neutral tile showing a box of mixed items, so it does not suggest a single service
 - **File Validation Failsafe**: Added intelligent detection for incorrect or corrupted PlayStation data files
 - **Platform-Specific Validators**: Configurable validators ensure uploaded files contain usable data
 - **Data Donation Enhancement**: Added comprehensive JSON export functionality
