@@ -301,6 +301,8 @@ once to point Caddy at the containers. Manual deploy or rollback on the host:
 
 ### Recent Updates
 - **Colour themes**: the look is set by `public/themes/<name>.json` (University of Surrey by default; `?theme=default` for the neutral one; see [Colour themes](#colour-themes))
+- **About page**: `/about` describes the tool and lists the project team, edited in `public/about.json` (see [About page](#about-page))
+- **Footer**: organisation, address with map link, phone, contact and legal links and an automatic © year, set in `public/footer.json` (see [Footer](#footer))
 - **Study details in the URL**: optional `?study=` and `?ethics=` parameters appear in parentheses after "our study" on the consent page and are saved as `studyInfo` in the donation (see [Study details in the URL](#study-details-in-the-url-optional))
 - **Play Movies & TV**: the Google Takeout parser now reads the watchlist and viewing history (titles and dates)
 - **Google Takeout logo**: a neutral tile showing a box of mixed items, so it does not suggest a single service
@@ -422,6 +424,77 @@ https://iemabot.surrey.ac.uk/datadonation/?platform=googletakeout&theme=default
   carries across pages. Fonts are not themed: the content security policy only
   allows self-hosted fonts.
 - Code: `src/utils/theme.js`, `src/ThemeLoader.js`, `src/theme.css`.
+
+### Header
+
+Every page starts with a header panel that matches the footer (same theme colours and
+accent rule): the tool's name, linking to the start page, a one-line description and
+an "About" link. Its text is `public/header.json` (`title`, `tagline`); delete the file
+to show no header. The platform picker (homepage) sits on a plain light background
+between the two panels. Code: `src/components/Header.js`, `src/utils/headerConfig.js`,
+`src/theme.css`.
+
+### Footer
+
+Every page ends with a footer: phone, a contact link (email), legal links (data protection, cookies, disclaimer, accessibility),
+an "About" link and "© <current year> <copyright holder>" (the year updates itself). It takes its
+colours from the active theme and stacks into one column on phones.
+
+- **Edit it:** the content is `public/footer.json` (`organisation` heading, `copyright` holder, `address` lines,
+  `map`, `phone`, `contact` and a list of `links`, each `{label, href}`). It
+  currently shows the developer's work phone and email, with no postal address.
+  An optional `organisation`, `address` and `map` block is supported if one is wanted
+  later.
+  Delete the file to show no footer.
+- The copyright line names the project (`copyright`, matching the MIT licence), **not**
+  the organisation: "© University of Surrey" would state that the university owns or
+  endorses the site. The line is omitted when `copyright` is empty.
+- Links may be `https:`, `http:`, `tel:`, `mailto:` or an in-app path such as `/about`;
+  anything else, and entries with no label, are ignored. Web links open in a new tab.
+- "Contact us" is a `mailto:` link to the project's contact address (currently the
+  main developer's university email). To use a contact page or form instead, change
+  `contact.href`. To point participants at the study's participant information or
+  privacy notice, add it under `links`.
+- Code: `src/components/Footer.js`, `src/utils/footerConfig.js`, `src/theme.css`.
+
+### About page
+
+`/about` (linked as "About" in the footer) says what the tool is, links to the
+source code and lists the project team, with a link to each person's profile where
+there is one. It works without `?platform=` (it does not need a platform config), so
+it can be opened or shared directly.
+
+- **Edit it:** the content is `public/about.json`: `title`, `paragraphs`, `source`
+  (`{label, href}`), `peopleTitle` and `people` (each `{name, role, detail, href}`,
+  `href` optional; `"newRow": true` starts a new row in the team grid). Only `https:`/`http:` links are used. Email addresses are
+  deliberately not shown.
+- "Back" returns to the page the visitor came from; when the page was opened
+  directly it reloads the start page.
+- Code: `src/pages/AboutPage.js`, `src/utils/aboutConfig.js`.
+
+### Cookies and accessibility
+
+This website follows the University of Surrey's cookie and accessibility policies,
+and says so on two in-app pages linked from the footer (`/cookies`, `/accessibility`).
+Both policies are written for the University's own website, so these pages describe
+*this* tool and point to the University's pages for reference.
+
+- **Cookies:** the tool sets no cookies, has no analytics or advertising, and keeps a
+  single `localStorage` item (`dd_filter_tour_seen_v1`, the "tour seen" flag). The one
+  third party is Cloudflare Turnstile (the bot check), which loads on every page.
+  A test checks that the cookie page names the key the code really uses. **If you add
+  analytics or any non-essential cookie, ask for consent first and update
+  `public/content/cookies.json`.**
+- **Accessibility:** the target is WCAG 2.2 AA, the University's standard. Every page
+  is scanned with axe-core (zero violations on the platform picker and the consent,
+  upload, About, Cookies and Accessibility pages, in both themes) and the build adds a
+  "Skip to main content" link, a `<main>` landmark, one `<h1>` per page, visible
+  keyboard focus and underlined text links. Not yet covered: the data-review table
+  and a manual screen-reader test; the Accessibility page says so.
+- **Edit the statements:** `public/content/cookies.json` and
+  `public/content/accessibility.json` (`title`, `intro` and `sections` with
+  `paragraphs`, `items` and `links`). Code: `src/pages/ContentPage.js`,
+  `src/utils/contentConfig.js`.
 
 ## File Structure
 
