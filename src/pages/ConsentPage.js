@@ -33,7 +33,7 @@ const ConsentPage = () => {
               height="40"
               style={{ flexShrink: 0, marginRight: '12px' }}
             />
-            <h2 className="mb-0">{config.page.consent.title}</h2>
+            <h1 className="h2 mb-0">{config.page.consent.title}</h1>
           </div>
         </div>
         <div className="card-body">
@@ -41,7 +41,7 @@ const ConsentPage = () => {
           <p>{config.page.consent.process}</p>
           {scope && (
             <div className="mb-3 p-3 border rounded bg-light" data-testid="data-scope">
-              <h3 className="h6">{scope.title}</h3>
+              <h2 className="h6">{scope.title}</h2>
               {scope.intro && <p className="mb-2">{scope.intro}</p>}
               <ul>
                 {(scope.services || []).map((service) => (

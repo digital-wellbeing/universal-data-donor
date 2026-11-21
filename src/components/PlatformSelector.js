@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Container } from '@mui/material';
 import './PlatformSelector.css';
 
 // Homepage sections, in display order. Every platform names one via `group`.
@@ -25,7 +25,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       name: 'Google Play Games',
       logo: '/android-logo.svg',
       description: 'Donate your Google Play Games data',
-      color: '#3DDC84'
+      color: '#1E7F4F' // darker than Android green so labels meet 4.5:1 contrast
     },
     {
       id: 'activitywatch',
@@ -73,7 +73,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       name: 'Fitbit',
       logo: '/fitbit-logo.svg',
       description: 'Donate your Fitbit / Google Health data via Google Takeout',
-      color: '#008C94'
+      color: '#00747B' // darker than Fitbit's brand teal so labels meet 4.5:1 contrast
     },
     {
       id: 'samsunghealth',
@@ -81,7 +81,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       name: 'Samsung Health',
       logo: '/samsunghealth-logo.svg',
       description: 'Donate your Galaxy Watch and Samsung Health data',
-      color: '#15965F'
+      color: '#0F7A4A' // darker so labels meet 4.5:1 contrast
     },
     {
       id: 'instagram',
@@ -118,15 +118,9 @@ const PlatformSelector = ({ onSelectPlatform }) => {
 
   return (
     <Box className="platform-selector-wrapper">
-      <Container maxWidth="lg" className="platform-selector-container">
-        <Box sx={{ textAlign: 'center', mb: 5 }}>
-          <Typography variant="h2" component="h1" className="platform-selector-title">
-            Universal Data Donor
-          </Typography>
-          <Typography variant="h5" className="platform-selector-subtitle">
-            Select the platform you want to donate data from
-          </Typography>
-        </Box>
+      <Container maxWidth={false} disableGutters className="container platform-selector-container">
+        {/* The visible title and subtitle live in the site header; this keeps the page's own <h1> for screen readers. */}
+        <h1 className="sr-only">Select the platform you want to donate data from</h1>
 
         <div className="platform-groups">
           {PLATFORM_GROUPS.map((group) => {

@@ -1,27 +1,9 @@
 .platform-selector-wrapper {
-  min-height: 100vh;
+  /* Plain light panel between the site header and footer (no gradient). */
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem 0;
-}
-
-.platform-selector-container {
-  max-width: 1200px;
-}
-
-.platform-selector-title {
-  font-size: 3rem;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 1rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.platform-selector-subtitle {
-  font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 300;
+  background: #f4f6f8;
+  padding: 2.5rem 0 2rem;
 }
 
 /* ---- Layout ----
@@ -60,7 +42,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
+  color: #495057;
 }
 
 .platform-grid {
@@ -129,11 +111,11 @@
 
 .platform-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.16);
 }
 
 .platform-card:focus-visible {
-  outline: 3px solid white;
+  outline: 3px solid var(--ud-link, #1976d2);
   outline-offset: 3px;
 }
 
@@ -192,14 +174,6 @@
    two-column grid (logo | text) and drops the subgrid rows, which only pay
    off when several cards share a row. */
 @media (max-width: 599px) {
-  .platform-selector-title {
-    font-size: 2rem;
-  }
-
-  .platform-selector-subtitle {
-    font-size: 1rem;
-  }
-
   .platform-groups { --cols: 1; row-gap: 1.75rem; }
   .platform-group[data-count] { grid-column: 1 / -1; }
 

@@ -235,3 +235,22 @@ describe('UploadPage Failsafe', () => {
   });
 });
 
+
+describe('keyboard access to the file pickers', () => {
+  test('the picker buttons are real buttons that open the hidden file inputs', () => {
+    const config = require('../../public/config-googletakeout.json');
+    render(
+      <ConfigContext.Provider value={config}>
+        <BrowserRouter><UploadPage setParsedData={() => {}} /></BrowserRouter>
+      </ConfigContext.Provider>,
+    );
+    const buttons = screen.getAllByRole('button').filter((b) => b.tagName === 'BUTTON');
+    const choose = buttons.find((b) => b.textContent === config.page.upload.uploadButton);
+    expect(choose).toBeTruthy(); // a <button>, so Enter and Space work
+    const clicked = jest.fn();
+    screen.getByTestId('file-input').addEventListener('click', clicked);
+    fireEvent.click(choose);
+    expect(clicked).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('label[role="button"]')).toBeNull();
+  });
+});

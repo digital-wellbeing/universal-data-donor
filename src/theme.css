@@ -36,7 +36,79 @@ a { color: var(--ud-link); }
 .btn.btn-link { color: var(--ud-link); }
 
 .card-header {
+  background-color: #f4f6f8;
+  color: #212529;
+  border-bottom: 4px solid var(--ud-accent);
+}
+
+/* Footer sits at the bottom of the viewport on short pages. */
+.ud-app { min-height: 100vh; display: flex; flex-direction: column; }
+.ud-app-main { flex: 1 0 auto; }
+.ud-footer {
+  padding: 2rem 0 1rem;
+  background-color: var(--ud-header-bg);
+  color: var(--ud-header-text);
+  border-top: 4px solid var(--ud-accent);
+  font-size: 0.9rem;
+}
+.ud-footer a,
+.ud-footer a:visited { color: var(--ud-header-text); text-decoration: underline; }
+.ud-footer a:hover,
+.ud-footer a:focus { color: var(--ud-accent); }
+.ud-footer-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+.ud-footer address { font-style: normal; }
+.ud-footer li { padding: 0.2rem 0; }
+.ud-footer-bottom {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(127, 127, 127, 0.4);
+  opacity: 0.85;
+}
+@media print { .ud-header, .ud-footer { display: none; } }
+
+/* About page */
+.ud-people {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem 1.5rem;
+}
+.ud-person-newrow { grid-column-start: 1; } /* starts a new row of the team grid */
+.ud-person-detail { color: #6c757d; font-size: 0.9rem; }
+
+/* Accessibility (WCAG 2.2 AA): skip link, visible keyboard focus, readable muted text, links that are not colour-only. */
+.ud-skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: 2000;
+  padding: 0.6rem 1rem;
+  background: #fff;
+  color: #000;
+  border: 2px solid #000;
+  border-radius: 4px;
+}
+.ud-skip-link:focus { top: 0.5rem; }
+.ud-app-main:focus { outline: none; }
+:focus-visible { outline: 3px solid var(--ud-link); outline-offset: 2px; }
+.ud-header :focus-visible,
+.ud-footer :focus-visible { outline-color: currentColor; } /* readable on both dark and light themes */
+.text-muted { color: #595f65 !important; } /* Bootstrap's #6c757d is 4.4:1 on light panels; this is 6.3:1 */
+.card-body a:not(.btn) { text-decoration: underline; }
+
+/* Site header panel (mirrors the footer: theme colours, accent rule). */
+.ud-header {
   background-color: var(--ud-header-bg);
   color: var(--ud-header-text);
   border-bottom: 4px solid var(--ud-accent);
+  padding: 0.9rem 0;
 }
+.ud-header a,
+.ud-header a:visited { color: var(--ud-header-text); }
+.ud-header-brand { font-size: 1.35rem; font-weight: 600; text-decoration: none; }
+.ud-header-brand:hover,
+.ud-header-link:hover { text-decoration: underline; }
+.ud-header-tagline { font-size: 0.9rem; opacity: 0.9; }
+.ud-header-link { text-decoration: underline; padding: 0.4rem 0; display: inline-block; }
+
+/* Space between a page's card and the footer (the footer itself has no top margin, so a full-width panel can meet it). */
+.ud-app-main > .container { padding-bottom: 3rem; }
