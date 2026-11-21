@@ -40,6 +40,35 @@ def test_unknown_top_level_key_is_rejected():
         validate_donation(donation({"T": []}, surprise=1), "garmin")
 
 
+@pytest.mark.parametrize("info", [
+    None,
+    {"study": "Screen Time Study", "ethics": "ETH-2026-001"},
+    {"study": "Only a study", "ethics": None},
+    {"study": None, "ethics": "ETH-1"},
+    {},
+    {"study": "x" * 120, "ethics": "y" * 120},
+])
+def test_study_info_from_the_page_url_is_accepted(info):
+    assert validate_donation(donation({"T": []}, studyInfo=info), "garmin") == (1, 0)
+
+
+def test_study_info_may_be_absent():
+    assert validate_donation(donation({"T": []}), "garmin") == (1, 0)
+
+
+@pytest.mark.parametrize("info", [
+    "a string", 5, ["study"], True,
+    {"study": "ok", "extra": "no"},
+    {"study": 1},
+    {"ethics": {"nested": "no"}},
+    {"study": "x" * 121},
+    {"ethics": ["a"]},
+])
+def test_malformed_study_info_is_rejected(info):
+    with pytest.raises(PayloadError):
+        validate_donation(donation({"T": []}, studyInfo=info), "garmin")
+
+
 def test_platform_inside_the_donation_must_match():
     assert validate_donation(donation({"T": []}, platform="garmin"), "garmin") == (1, 0)
     with pytest.raises(PayloadError):
