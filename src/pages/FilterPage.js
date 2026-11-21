@@ -8,6 +8,7 @@ import TurnstileWidget from '../components/TurnstileWidget';
 import { startFilterTour, hasSeenFilterTour } from '../components/filterTour';
 import postWithProgress from '../utils/postWithProgress';
 import { buildSubmissionBody } from '../utils/encryptDonation';
+import { getStudyInfo } from '../utils/studyInfo';
 
 // Keys that are internal bookkeeping and must never be shown as columns or
 // included in the donated data. `id`/`selected` are added by UploadPage; any
@@ -244,6 +245,8 @@ const FilterPage = ({ parsedData }) => {
       submissionId,
       timestamp: new Date().toISOString(),
       platform: platformId,
+      // Optional study name / ethics code from the page URL (null when none was given).
+      studyInfo: getStudyInfo(),
       data: donationData,
       deletedRowCounts: finalDeletedCounts,
       parsingErrors: parsingErrors,
