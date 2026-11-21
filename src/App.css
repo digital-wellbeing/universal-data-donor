@@ -55,5 +55,5 @@
 }
 
 .dropzone.active {
-  border-color: #2196f3;
+  border-color: var(--ud-accent, #2196f3);
 }
