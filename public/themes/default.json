@@ -1,0 +1,14 @@
+{
+  "name": "Default",
+  "colors": {
+    "primary": "#1976D2",
+    "primaryHover": "#1565C0",
+    "onPrimary": "#FFFFFF",
+    "onPrimaryHover": "#FFFFFF",
+    "secondary": "#6C757D",
+    "accent": "#DEE2E6",
+    "link": "#1976D2",
+    "headerBackground": "#F7F7F7",
+    "headerText": "#212529"
+  }
+}

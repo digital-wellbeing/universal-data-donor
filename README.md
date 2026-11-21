@@ -300,6 +300,7 @@ once to point Caddy at the containers. Manual deploy or rollback on the host:
 ## Development Notes
 
 ### Recent Updates
+- **Colour themes**: the look is set by `public/themes/<name>.json` (University of Surrey by default; `?theme=default` for the neutral one; see [Colour themes](#colour-themes))
 - **Study details in the URL**: optional `?study=` and `?ethics=` parameters appear in parentheses after "our study" on the consent page and are saved as `studyInfo` in the donation (see [Study details in the URL](#study-details-in-the-url-optional))
 - **Play Movies & TV**: the Google Takeout parser now reads the watchlist and viewing history (titles and dates)
 - **Google Takeout logo**: a neutral tile showing a box of mixed items, so it does not suggest a single service
@@ -396,6 +397,31 @@ The system expects to find these sheets in a valid PlayStation data export:
 - PS VR
 - Subscription
 - Transaction Detail
+
+### Colour themes
+
+The look of the app (page title bars, buttons, links, accents and the data grid) is
+set by a small theme file in `public/themes/`. This deployment uses the
+**University of Surrey** theme by default (navy `#25384A` and gold `#F1B53D`,
+taken from surrey.ac.uk); `?theme=default` gives the neutral blue/grey look.
+
+```
+https://iemabot.surrey.ac.uk/datadonation/?platform=googletakeout&theme=default
+```
+
+- **Add a theme:** copy `public/themes/surrey.json` to `public/themes/<name>.json`
+  (lowercase letters, digits and hyphens) and change the colours. Keys: `primary`,
+  `primaryHover`, `onPrimary`, `onPrimaryHover` (button and its text colour),
+  `secondary`, `accent` (the rule under each title bar), `link`, `headerBackground`,
+  `headerText`. Open it with `?theme=<name>`.
+- **Change the default:** edit `DEFAULT_THEME` in `src/utils/theme.js`.
+- A theme file can only set colours: each value must be a 6-digit hex code and
+  anything else is ignored. An unknown `?theme=` falls back to the `default` theme,
+  and the app still works if no theme file can be loaded.
+- Like the study details, the theme is read once when the page loads, so it
+  carries across pages. Fonts are not themed: the content security policy only
+  allows self-hosted fonts.
+- Code: `src/utils/theme.js`, `src/ThemeLoader.js`, `src/theme.css`.
 
 ## File Structure
 
