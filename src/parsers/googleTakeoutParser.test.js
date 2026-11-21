@@ -52,7 +52,10 @@ const healthFiles = {
 const loadPlayGamesFiles = async () => playGamesFiles();
 
 const healthZip = () => makeFile({ ...fitFiles, ...healthFiles });
-const everythingZip = async () => makeFile({ ...fitFiles, ...healthFiles, ...(await loadPlayGamesFiles()) });
+const moviesFiles = {
+  'Takeout/Google Play Movies & TV/Watchlist.json': JSON.stringify({ items: [{ title: 'Synthetic Film', added_time: 'Nov 2, 2026, 4:32:51 AM GMT' }] }),
+};
+const everythingZip = async () => makeFile({ ...fitFiles, ...healthFiles, ...moviesFiles, ...(await loadPlayGamesFiles()) });
 const rows = (result, table) => (result.data[table] || []);
 
 describe('parseGoogleTakeout', () => {
@@ -64,10 +67,11 @@ describe('parseGoogleTakeout', () => {
       'Google Health - Daily Activity',
       'Play Games - Daily Playtime',
       'Play Games - Game Activity',
+      'Play Movies & TV - Watchlist',
       'YouTube - Daily Activity',
       'YouTube - Viewing Sessions',
     ]);
-    expect(result.metadata.services.sort()).toEqual(['Google Fit', 'Google Health', 'Play Games', 'YouTube']);
+    expect(result.metadata.services.sort()).toEqual(['Google Fit', 'Google Health', 'Play Games', 'Play Movies & TV', 'YouTube']);
   });
 
   test('drops rows older than the window and counts them per table', async () => {
@@ -117,7 +121,7 @@ describe('parseGoogleTakeout', () => {
   test('does not report a service as broken just because another zip holds it', async () => {
     const result = await parseGoogleTakeout(await youtubeZip(), undefined, opts());
     expect(result.parsingErrors.tablesNotParsed).toEqual([]);
-    expect(result.parsingErrors.sheetsNotFound).toEqual(['Google Fit', 'Google Health', 'Play Games']);
+    expect(result.parsingErrors.sheetsNotFound).toEqual(['Google Fit', 'Google Health', 'Play Games', 'Play Movies & TV']);
   });
 
   test('merges the same table when a service is split across zips, oldest first', async () => {
@@ -162,7 +166,7 @@ describe('parseGoogleTakeout', () => {
   test('a donor with no Takeout data gets a clear, empty result', async () => {
     const result = await parseGoogleTakeout(await makeFile({ 'Takeout/Mail/mbox.txt': 'x' }), undefined, opts());
     expect(result.data).toEqual({});
-    expect(result.parsingErrors.sheetsNotFound).toEqual(['Google Fit', 'Google Health', 'Play Games', 'YouTube']);
+    expect(result.parsingErrors.sheetsNotFound).toEqual(['Google Fit', 'Google Health', 'Play Games', 'Play Movies & TV', 'YouTube']);
     expect(validateGoogleTakeout(result).valid).toBe(false);
   });
 });

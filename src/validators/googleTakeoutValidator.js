@@ -27,6 +27,6 @@ export default function validateGoogleTakeoutData(parseResult) {
 
   return {
     valid: false,
-    reason: 'No Google Fit, Google Health, Play Games or YouTube data found in the uploaded Takeout export',
+    reason: 'No Google Fit, Google Health, Play Games, Play Movies & TV or YouTube data found in the uploaded Takeout export',
   };
 }
