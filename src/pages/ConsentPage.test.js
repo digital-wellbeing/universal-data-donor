@@ -51,8 +51,7 @@ describe('Google Takeout consent (real config)', () => {
     renderWith(config);
     const scope = screen.getByTestId('data-scope');
 
-    // The services the Takeout parser looks for (Fit, Google Health/Fitbit, Play Games, YouTube),
-    // plus Play Movies & TV, which can be in the download but is not read.
+    // The services the Takeout parser looks for (Fit, Google Health/Fitbit, Play Games, Play Movies & TV, YouTube).
     ['Fit', 'Google Health (or Fitbit)', 'Google Play Games Services', 'Google Play Movies & TV', 'YouTube and YouTube Music'].forEach((name) => {
       expect(within(scope).getByText(name)).toBeInTheDocument();
     });
@@ -63,16 +62,19 @@ describe('Google Takeout consent (real config)', () => {
     expect(scope).toHaveTextContent(/never opened, and nothing from them is donated/);
   });
 
-  test('lists Google Play Movies & TV explicitly and says nothing is read from it', () => {
+  test('lists Google Play Movies & TV explicitly: watchlist and viewing history are read, the rest is not', () => {
     renderWith(config);
     const scope = screen.getByTestId('data-scope');
     const entry = within(scope).getByText('Google Play Movies & TV').closest('li');
-    expect(entry).toHaveTextContent(/Read: nothing\. It can be part of your download, but this tool does not read it\./);
+    expect(entry).toHaveTextContent(/Read: your watchlist and your viewing history/);
+    expect(entry).toHaveTextContent(/titles and the dates and times/);
+    expect(entry).toHaveTextContent(/Not read: your purchases, rentals, ratings/);
     expect(entry).toHaveTextContent(/None of it is used or donated/);
   });
 
-  test('the upload instructions also say Play Movies & TV is ignored', () => {
-    expect(config.page.upload.intro).toMatch(/Google Play Movies & TV[^.]*ignored/);
+  test('the upload instructions ask for Play Movies & TV, and say other services are ignored', () => {
+    expect(config.page.upload.intro).toMatch(/select \\"Google Play Movies & TV\\"|select "Google Play Movies & TV"/i);
+    expect(config.page.upload.intro).toMatch(/other service[^.]*ignored/);
   });
 
   test('promises that location and YouTube titles/links are not collected, as the parsers guarantee', () => {

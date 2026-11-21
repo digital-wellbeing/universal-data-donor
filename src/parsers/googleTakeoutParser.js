@@ -5,6 +5,7 @@ import parseGoogleFit from './googlefitParser';
 import parseGoogleHealth from './fitbitParser';
 import parsePlayGames from './androidParser';
 import parseYouTube from './youtubeParser';
+import parsePlayMovies, { PLAY_MOVIES_FILE } from './playMoviesParser';
 
 /**
  * Parser for a complete Google Takeout export: one or several `.zip` parts.
@@ -17,7 +18,8 @@ import parseYouTube from './youtubeParser';
  * While a window is active, a row whose date cannot be determined is removed
  * too, so nothing of unknown age is donated.
  *
- * Services: Google Fit, Google Health (Fitbit), Google Play Games, YouTube.
+ * Services: Google Fit, Google Health (Fitbit), Google Play Games, Play Movies & TV
+ * (watchlist and viewing history), YouTube.
  *
  * @param {File|File[]} input - One Takeout zip, or all of its parts.
  * @param {(fraction: number) => void} [onProgress]
@@ -64,6 +66,13 @@ const SERVICES = [
     prefix: 'Play Games',
     detect: /(?:^|\/)Google Play Games Services\//i,
     parse: async (file) => parsePlayGames(await slimPlayGamesZip(file)),
+  },
+  {
+    id: 'movies',
+    label: 'Play Movies & TV',
+    prefix: 'Play Movies & TV',
+    detect: PLAY_MOVIES_FILE,
+    parse: (file, report) => parsePlayMovies(file, report),
   },
   {
     id: 'youtube',
