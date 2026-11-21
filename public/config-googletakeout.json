@@ -24,7 +24,7 @@
   "page": {
     "consent": {
       "title": "Google Takeout Study",
-      "intro": "You are about to start the process of donating data from your Google Takeout export to our study. We ask for your recent screen time (YouTube viewing times) and health and activity data (Google Fit, Google Health and Google Play Games playtime). For Google Fit this includes the individual timestamped samples of heart rate, steps, distance, calories, activity type and sleep stages, not only daily totals, and we do not read or collect your location. The data will be used for academic research on screen time, physical activity and wellbeing.",
+      "intro": "You are about to start the process of donating data from your Google Takeout export to our study. We ask for your recent screen time (YouTube viewing times, and your Google Play Movies & TV watchlist and viewing history) and health and activity data (Google Fit, Google Health and Google Play Games playtime). For Google Fit this includes the individual timestamped samples of heart rate, steps, distance, calories, activity type and sleep stages, not only daily totals, and we do not read or collect your location. The data will be used for academic research on screen time, physical activity and wellbeing.",
       "process": "We will walk you through this process step by step. During this process no data is stored or sent to a server. Only data from the last 6 months is kept; anything older is removed automatically on your own computer. YouTube video titles, channels, links and search terms are never read into the donation, only when you watched or searched. You can also delete rows before donating. Data will only be donated and stored when you click the button \"Yes, donate\" on the page that shows your data.",
       "dataScope": {
         "title": "What we ask for, and what is actually read",
@@ -49,8 +49,8 @@
           },
           {
             "name": "Google Play Movies & TV",
-            "read": "nothing. It can be part of your download, but this tool does not read it.",
-            "notRead": "your purchases, rentals, watchlist, ratings and viewing history. None of it is used or donated."
+            "read": "your watchlist and your viewing history, if your download has one: the titles and the dates and times you saved or watched them.",
+            "notRead": "your purchases, rentals, ratings and every other file in that folder. None of it is used or donated."
           },
           {
             "name": "YouTube and YouTube Music",
@@ -72,7 +72,7 @@
     },
     "upload": {
       "title": "Upload File",
-      "intro": "Please export your data from Google Takeout (takeout.google.com). Select \"Fit\", \"Google Health\" or \"Fitbit\" (if you have them), \"Google Play Games Services\" and \"YouTube and YouTube Music\" (under its options, include \"history\"), then download the export. If it also contains \"Google Play Movies & TV\" or any other service, that is ignored. Google may split it into several .zip files: choose all of them at once.",
+      "intro": "Please export your data from Google Takeout (takeout.google.com). Select \"Fit\", \"Google Health\" or \"Fitbit\" (if you have them), \"Google Play Games Services\" and \"YouTube and YouTube Music\" (under its options, include \"history\"), then download the export. Also select \"Google Play Movies & TV\" if you have it. Any other service in the download is ignored. Google may split it into several .zip files: choose all of them at once.",
       "uploadButton": "Upload files",
       "folderButton": "Select a folder",
       "dropHint": "Or drag and drop the .zip files, or the folder that contains them, here. You can add files in several steps.",
@@ -84,7 +84,7 @@
       "possibleIssues": "We were unable to find any usable data from the last 6 months in the uploaded files. This could mean:",
       "issuePoints": [
         "The files are not a Google Takeout export",
-        "The export did not include Fit, Google Health, Google Play Games Services or YouTube history",
+        "The export did not include Fit, Google Health, Google Play Games Services, Google Play Movies & TV or YouTube history",
         "You did not select every .zip part of a split export",
         "All of the data in the export is older than 6 months",
         "The YouTube history is not in English (other languages are not supported yet)",

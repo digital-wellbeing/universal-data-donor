@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import PlatformSelector from './components/PlatformSelector';
+import { getStudyInfo } from './utils/studyInfo';
 
 export const ConfigContext = createContext();
 
@@ -36,6 +37,9 @@ export const ConfigProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    // Remember the optional study details (?study=..&ethics=..) before navigation drops the query string.
+    getStudyInfo();
+
     // Get platform from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const platform = urlParams.get('platform');
