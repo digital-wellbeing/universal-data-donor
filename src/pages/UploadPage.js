@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -19,6 +19,8 @@ const UploadPage = ({ setParsedData }) => {
   const [files, setFiles] = useState([]); // one entry, or several for multi-part exports
   const [ignoredCount, setIgnoredCount] = useState(0); // picked or dropped files with the wrong type
   const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(null); // whole percent, for streaming parsers
   const [parsingWarning, setParsingWarning] = useState(null);
@@ -159,7 +161,7 @@ const UploadPage = ({ setParsedData }) => {
     <div className="container mt-5">
       <div className="card">
         <div className="card-header">
-          <h2>{config.page.upload.title}</h2>
+          <h1 className="h2">{config.page.upload.title}</h1>
         </div>
         <div className="card-body">
           <p className="mb-3">
@@ -179,21 +181,28 @@ const UploadPage = ({ setParsedData }) => {
             }}
           >
             <div className="d-flex flex-wrap align-items-center" style={{ gap: 8 }}>
-              <Button component="label" variant="contained">
+              {/* A real button that opens the hidden input: a <label> with role=button cannot be used from the keyboard. */}
+              <Button variant="contained" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
                 {upload.uploadButton}
-                <input
-                  type="file"
-                  hidden
-                  data-testid="file-input"
-                  onChange={handleFileChange}
-                  multiple={multiple}
-                  accept={config.general.fileExtensions.join(',')}
-                />
               </Button>
+              <input
+                ref={fileInputRef}
+                aria-label={upload.uploadButton}
+                type="file"
+                hidden
+                data-testid="file-input"
+                onChange={handleFileChange}
+                multiple={multiple}
+                accept={config.general.fileExtensions.join(',')}
+              />
               {multiple && (
-                <Button component="label" variant="outlined">
-                  {upload.folderButton || 'Select a folder'}
+                <>
+                  <Button variant="outlined" onClick={() => folderInputRef.current && folderInputRef.current.click()}>
+                    {upload.folderButton || 'Select a folder'}
+                  </Button>
                   <input
+                    ref={folderInputRef}
+                    aria-label={upload.folderButton || 'Select a folder'}
                     type="file"
                     hidden
                     data-testid="folder-input"
@@ -201,7 +210,7 @@ const UploadPage = ({ setParsedData }) => {
                     multiple
                     webkitdirectory=""
                   />
-                </Button>
+                </>
               )}
             </div>
             <p className="mt-2 mb-0 text-muted">

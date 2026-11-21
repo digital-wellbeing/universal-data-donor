@@ -17,7 +17,7 @@ const ThankYouPage = () => {
     <div className="container mt-5">
       <div className="card text-center">
         <div className="card-header">
-          <h2>{config.page.thankyou.title}</h2>
+          <h1 className="h2">{config.page.thankyou.title}</h1>
         </div>
         <div className="card-body">
           {donated ? (

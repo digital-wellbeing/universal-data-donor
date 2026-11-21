@@ -1,0 +1,40 @@
+{
+  "title": "Accessibility",
+  "intro": "We want as many people as possible to be able to use this website, and we aim to meet the Web Content Accessibility Guidelines (WCAG) 2.2 level AA, the standard the University of Surrey works to.",
+  "sections": [
+    {
+      "heading": "What we do",
+      "items": [
+        "Every page is checked with an automated accessibility tester (axe-core) and fixed before release.",
+        "You can use the pages with a keyboard alone, and there is a \"Skip to main content\" link at the top of each page.",
+        "Text can be enlarged and the layout adapts to small screens.",
+        "Text and controls are designed to meet the minimum colour contrast ratios."
+      ]
+    },
+    {
+      "heading": "Known limitations",
+      "paragraphs": [
+        "We have not yet completed a full manual test with screen readers and other assistive technology, so this website should be treated as partially tested. The table where you review and delete rows of your data, and the Cloudflare security check on the donation step, are the areas most likely to cause difficulty."
+      ]
+    },
+    {
+      "heading": "Reporting a problem or asking for another format",
+      "paragraphs": [
+        "If you have any difficulty using this website, or need the information in a different format, please email Dr Tamas Foldes, the main developer, and we will help. It is useful to include:"
+      ],
+      "items": [
+        "the page address (URL)",
+        "what went wrong, and whether you were on a mobile or desktop device",
+        "any software or assistive technology you use, for example your browser or screen reader"
+      ],
+      "links": [{ "label": "Email t.foldes@surrey.ac.uk", "href": "mailto:t.foldes@surrey.ac.uk" }]
+    },
+    {
+      "heading": "University of Surrey accessibility statement",
+      "paragraphs": [
+        "The University's accessibility statement covers the University's main website, which is a separate website from this tool."
+      ],
+      "links": [{ "label": "University of Surrey accessibility statement", "href": "https://www.surrey.ac.uk/accessibility" }]
+    }
+  ]
+}

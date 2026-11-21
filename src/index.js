@@ -7,16 +7,25 @@ import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 import { ConfigProvider } from './ConfigContext';
 import ThemeLoader from './ThemeLoader';
+import Header from './components/Header';
+import Footer from './components/Footer';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <ThemeLoader>
-      <ConfigProvider>
-        <BrowserRouter basename="/datadonation">
-          <App />
-        </BrowserRouter>
-      </ConfigProvider>
+      <BrowserRouter basename="/datadonation">
+        <div className="ud-app">
+          <a className="ud-skip-link" href="#main-content">Skip to main content</a>
+          <Header />
+          <main id="main-content" className="ud-app-main" tabIndex={-1}>
+            <ConfigProvider>
+              <App />
+            </ConfigProvider>
+          </main>
+          <Footer />
+        </div>
+      </BrowserRouter>
     </ThemeLoader>
   </React.StrictMode>
 );
