@@ -6,17 +6,9 @@ import { getParser } from '../utils/parserFactory';
 import { getValidator } from '../utils/validatorFactory';
 import { ConfigContext } from '../ConfigContext';
 
-// Mock config for testing
-const config = {
-  platform: 'PlayStation',
-  parser: 'playstation',
-  validator: 'playstation',
-  logo: '/logo.png',
-  title: 'Data Donation',
-  consent: {
-    text: 'Test consent text'
-  }
-};
+// The real PlayStation config: the page reads `general` and `page.upload` from it, and the
+// assertions below check the texts it defines, so the test cannot drift from the shipped config.
+const config = require('../../public/config-playstation.json');
 
 // Mock the parser factory to return a mocked parser function
 jest.mock('../utils/parserFactory');
