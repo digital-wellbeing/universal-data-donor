@@ -3,17 +3,8 @@ import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { ConfigContext } from './ConfigContext';
 
-// Mock config for testing
-const config = {
-  platform: 'PlayStation',
-  parser: 'playstation',
-  validator: 'playstation',
-  logo: '/logo.png',
-  title: 'Data Donation',
-  consent: {
-    text: 'Test consent text'
-  }
-};
+// The real PlayStation config (the shape the app reads: `general`, `header`, `page`).
+const config = require('../public/config-playstation.json');
 
 test('renders consent page on initial load', () => {
   render(
