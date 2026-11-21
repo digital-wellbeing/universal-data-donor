@@ -45,7 +45,9 @@ describe('UploadPage multi-file support', () => {
 
     expect(input.multiple).toBe(true);
     fireEvent.change(input, { target: { files: [zipFile('a.zip'), zipFile('b.zip')] } });
-    expect(screen.getByText(/a\.zip, b\.zip/)).toBeInTheDocument();
+    expect(screen.getByText(/Selected: 2 files/)).toBeInTheDocument();
+    expect(screen.getByText(/a\.zip/)).toBeInTheDocument();
+    expect(screen.getByText(/b\.zip/)).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('proceed-button'));
 
     await waitFor(() => expect(setParsedData).toHaveBeenCalled());
