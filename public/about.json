@@ -1,0 +1,38 @@
+{
+  "title": "About this tool",
+  "paragraphs": [
+    "Universal Data Donor lets people donate their own data for academic research. Your file is read and filtered on your own computer; nothing is sent to a server until you press \"Yes, donate\", and you can delete rows before you do.",
+    "This tool is developed by Dr Tamas Foldes, Postdoctoral Research Fellow at the Surrey Sleep Research Centre, in collaboration with Dr Zsofia Zavecz and Dr Oscar Ferrante from the School of Psychology, University of Surrey. It is open-source software."
+  ],
+  "source": {
+    "label": "Source code on GitHub",
+    "href": "https://github.com/digital-wellbeing/universal-data-donor"
+  },
+  "peopleTitle": "Project team",
+  "people": [
+    {
+      "name": "Dr Tamas Foldes",
+      "role": "Main developer, Postdoctoral Research Fellow",
+      "href": "https://openresearch.surrey.ac.uk/esploro/profile/tamas_foldes/overview",
+      "detail": "Surrey Sleep Research Centre"
+    },
+    {
+      "name": "Dr Zsofia Zavecz",
+      "role": "Lecturer in Cognitive Psychology",
+      "href": "https://openresearch.surrey.ac.uk/esploro/profile/zsofia_zavecz/overview?institution=44SUR_INST",
+      "detail": "School of Psychology"
+    },
+    {
+      "name": "Dr Oscar Ferrante",
+      "role": "Lecturer in Cognitive Neuroscience",
+      "href": "https://openresearch.surrey.ac.uk/esploro/profile/oscar_ferrante/overview",
+      "detail": "School of Psychology"
+    },
+    {
+      "name": "Tom Quixley",
+      "role": "Placement student",
+      "detail": "Psychology",
+      "newRow": true
+    }
+  ]
+}

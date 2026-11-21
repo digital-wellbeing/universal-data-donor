@@ -418,7 +418,7 @@ const FilterPage = ({ parsedData }) => {
     <div className="container-fluid mt-5">
       <div className="card">
         <div className="card-header">
-                          <h2>{config.page.filter.dataOverview}</h2>
+                          <h1 className="h2">{config.page.filter.dataOverview}</h1>
         </div>
         <div className="card-body">
           <p>{config.page.filter.intro}</p>
@@ -513,14 +513,14 @@ const FilterPage = ({ parsedData }) => {
 
             return (
               <Box key={sheetName} sx={{ width: '100%', mb: 4 }}>
-                <h3 data-tour={isFirstTable ? 'table-title' : undefined} style={{
+                <h2 className="h3" data-tour={isFirstTable ? 'table-title' : undefined} style={{
                   paddingTop: '4px',
                   paddingBottom: '4px',
                   borderTopWidth: '2px',
                   borderBottomWidth: '2px',
                   marginTop: '8px',
                   marginBottom: '16px'
-                }}>{sheetName.replace(/"/g, '')} <span style={{ fontSize: '0.7em', color: '#6c757d', fontWeight: 'normal' }}>({rows.length.toLocaleString()} rows)</span></h3>
+                }}>{sheetName.replace(/"/g, '')} <span style={{ fontSize: '0.7em', color: '#595f65', fontWeight: 'normal' }}>({rows.length.toLocaleString()} rows)</span></h2>
                 <Box data-tour={isFirstTable ? 'grid' : undefined} sx={{
                   display: 'flex',
                   flexDirection: 'column',
