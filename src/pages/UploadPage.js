@@ -7,10 +7,18 @@ import AlertTitle from '@mui/material/AlertTitle';
 import { getParser } from '../utils/parserFactory';
 import { getValidator } from '../utils/validatorFactory';
 import { useConfig } from '../ConfigContext';
+import { filesFromDataTransfer, filterByExtension, mergeFiles } from '../utils/collectFiles';
+
+const formatSize = (bytes) => {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+};
 
 const UploadPage = ({ setParsedData }) => {
   const config = useConfig();
   const [files, setFiles] = useState([]); // one entry, or several for multi-part exports
+  const [ignoredCount, setIgnoredCount] = useState(0); // picked or dropped files with the wrong type
+  const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(null); // whole percent, for streaming parsers
   const [parsingWarning, setParsingWarning] = useState(null);
@@ -21,14 +29,41 @@ const UploadPage = ({ setParsedData }) => {
     return <div>Loading...</div>;
   }
 
+  const multiple = Boolean(config.general.multipleFiles);
+
+  // Takes files from the picker, the folder picker or a drop. Multi-part platforms accumulate
+  // the selection (so a second pick adds to the first); the others keep a single file.
+  const addFiles = (incoming) => {
+    const { accepted, ignored } = filterByExtension(incoming, config.general.fileExtensions);
+    setIgnoredCount(ignored.length);
+    if (accepted.length === 0) return;
+    setFiles((current) => (multiple ? mergeFiles(current, accepted) : [accepted[0]]));
+    // Reset warning and cached data when the selection changes
+    setParsingWarning(null);
+    setParsedDataCache(null);
+  };
+
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files || []);
-    if (selectedFiles.length > 0) {
-      setFiles(selectedFiles);
-      // Reset warning and cached data when new file is selected
-      setParsingWarning(null);
-      setParsedDataCache(null);
-    }
+    addFiles(Array.from(e.target.files || []));
+    e.target.value = ''; // lets the same file(s) be chosen again after removing them
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setDragging(false);
+    if (loading) return;
+    addFiles(await filesFromDataTransfer(e.dataTransfer));
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault(); // required for the drop event to fire
+    if (!dragging) setDragging(true);
+  };
+
+  const removeFile = (index) => {
+    setFiles((current) => current.filter((_, i) => i !== index));
+    setParsingWarning(null);
+    setParsedDataCache(null);
   };
 
 
@@ -113,7 +148,12 @@ const UploadPage = ({ setParsedData }) => {
     setParsingWarning(null);
     setParsedDataCache(null);
     setFiles([]);
+    setIgnoredCount(0);
   };
+
+  const upload = config.page.upload;
+  const extensionList = config.general.fileExtensions.join(', ');
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
 
   return (
     <div className="container mt-5">
@@ -125,26 +165,88 @@ const UploadPage = ({ setParsedData }) => {
           <p className="mb-3">
             {config.page.upload.intro}
           </p>
-          <div className="d-block">
-            <Button
-              component="label"
-              variant="contained"
-              sx={{ display: 'block', width: 'fit-content' }}
-            >
-              {config.page.upload.uploadButton}
-              <input
-                type="file"
-                hidden
-                onChange={handleFileChange}
-                multiple={Boolean(config.general.multipleFiles)}
-                accept={config.general.fileExtensions.join(',')}
-              />
-            </Button>
-          </div>
-          {files.length > 0 && !parsingWarning && (
-            <div className="alert alert-info mt-3">
-              {config.page.upload.selectedFile} {files.map((f) => f.name).join(', ')}
+          <div
+            data-testid="dropzone"
+            onDragEnter={handleDragOver}
+            onDragOver={handleDragOver}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            style={{
+              border: `2px dashed ${dragging ? '#1976d2' : '#9e9e9e'}`,
+              background: dragging ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+              borderRadius: 8,
+              padding: 16,
+            }}
+          >
+            <div className="d-flex flex-wrap align-items-center" style={{ gap: 8 }}>
+              <Button component="label" variant="contained">
+                {upload.uploadButton}
+                <input
+                  type="file"
+                  hidden
+                  data-testid="file-input"
+                  onChange={handleFileChange}
+                  multiple={multiple}
+                  accept={config.general.fileExtensions.join(',')}
+                />
+              </Button>
+              {multiple && (
+                <Button component="label" variant="outlined">
+                  {upload.folderButton || 'Select a folder'}
+                  <input
+                    type="file"
+                    hidden
+                    data-testid="folder-input"
+                    onChange={handleFileChange}
+                    multiple
+                    webkitdirectory=""
+                  />
+                </Button>
+              )}
             </div>
+            <p className="mt-2 mb-0 text-muted">
+              {upload.dropHint || (multiple
+                ? `Or drag and drop ${extensionList} files, or a folder, here.`
+                : 'Or drag and drop the file here.')}
+            </p>
+          </div>
+          {files.length === 1 && !parsingWarning && (
+            <div className="alert alert-info mt-3">
+              {upload.selectedFile} {files[0].name}
+            </div>
+          )}
+          {files.length > 1 && !parsingWarning && (
+            <div className="alert alert-info mt-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <strong>
+                  {upload.selectedFile} {files.length} files ({formatSize(totalBytes)})
+                </strong>
+                <Button size="small" onClick={() => setFiles([])} disabled={loading}>
+                  {upload.clearAll || 'Clear all'}
+                </Button>
+              </div>
+              <ul className="mb-0 mt-2" data-testid="selected-files">
+                {files.map((file, index) => (
+                  <li key={`${file.name}-${file.size}-${file.lastModified}`}>
+                    {file.name} ({formatSize(file.size)}){' '}
+                    <Button
+                      size="small"
+                      aria-label={`Remove ${file.name}`}
+                      onClick={() => removeFile(index)}
+                      disabled={loading}
+                    >
+                      Remove
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {ignoredCount > 0 && (
+            <Alert severity="info" sx={{ mt: 2 }} data-testid="ignored-note">
+              {ignoredCount} {ignoredCount === 1 ? 'file was' : 'files were'} ignored because only {extensionList} files
+              are used. {multiple && 'Files you have already extracted are not used; choose the .zip files themselves.'}
+            </Alert>
           )}
           {loading && (
             <div className="alert alert-warning mt-3">
