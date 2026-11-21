@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConfig } from '../ConfigContext';
+import { getStudyInfo, insertStudyInfo } from '../utils/studyInfo';
 
 const ConsentPage = () => {
   const config = useConfig();
@@ -36,7 +37,7 @@ const ConsentPage = () => {
           </div>
         </div>
         <div className="card-body">
-          <p>{config.page.consent.intro}</p>
+          <p>{insertStudyInfo(config.page.consent.intro, getStudyInfo())}</p>
           <p>{config.page.consent.process}</p>
           {scope && (
             <div className="mb-3 p-3 border rounded bg-light" data-testid="data-scope">

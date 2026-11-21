@@ -84,3 +84,41 @@ describe('Google Takeout consent (real config)', () => {
     expect(scope).toHaveTextContent(/video titles, channel names, links and search text are not kept/);
   });
 });
+
+describe('ConsentPage study details from the URL', () => {
+  const { resetStudyInfo } = require('../utils/studyInfo');
+  const visit = (search) => {
+    resetStudyInfo();
+    window.history.pushState({}, '', `/${search}`);
+  };
+  afterEach(() => {
+    resetStudyInfo();
+    window.history.pushState({}, '', '/');
+  });
+
+  test('puts the study name and ethics code in parentheses after "our study"', () => {
+    visit('?study=Screen%20Time%20Study&ethics=ETH-2026-001');
+    renderWith(base({ intro: 'donating data to our study. More.' }));
+    expect(screen.getByText('donating data to our study (Screen Time Study; ethics approval: ETH-2026-001). More.')).toBeInTheDocument();
+  });
+
+  test('shows the text unchanged without parameters', () => {
+    visit('');
+    renderWith(base({ intro: 'donating data to our study. More.' }));
+    expect(screen.getByText('donating data to our study. More.')).toBeInTheDocument();
+  });
+
+  test('renders markup in a parameter as plain text', () => {
+    visit('?study=%3Cb%3Ebold%3C%2Fb%3E');
+    const { container } = renderWith(base({ intro: 'to our study.' }));
+    expect(container.querySelector('b')).toBeNull();
+    expect(container).toHaveTextContent('to our study (<b>bold</b>).');
+  });
+
+  test('works with the real Takeout wording', () => {
+    visit('?study=Sleep%20and%20Screens');
+    const real = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config-googletakeout.json'), 'utf8'));
+    renderWith(real);
+    expect(screen.getByText(/from your Google Takeout export to our study \(Sleep and Screens\)\. We ask for/)).toBeInTheDocument();
+  });
+});
