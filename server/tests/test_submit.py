@@ -46,6 +46,22 @@ def test_valid_donation_is_stored_encrypted_with_server_counted_totals(client):
     assert rows() == [(SID, "googletakeout", 1, 3, "enc:v1:")]
 
 
+def test_study_info_from_the_page_url_is_accepted_and_stored(client):
+    # The web app adds studyInfo (the optional ?study=&ethics= label) to every package.
+    body = package(studyInfo={"study": "Screen Time Study", "ethics": "ETH-2026-001"})
+    assert post(client, body).status_code == 200
+    assert rows() == [(SID, "googletakeout", 1, 3, "enc:v1:")]
+
+
+def test_a_null_study_info_is_accepted(client):
+    assert post(client, package(studyInfo=None)).status_code == 200
+
+
+def test_a_malformed_study_info_is_rejected(client):
+    r = post(client, package(studyInfo={"study": "ok", "surprise": "no"}))
+    assert r.status_code == 400 and rows() == []
+
+
 def test_missing_or_bad_turnstile_token_is_rejected(client):
     assert post(client, package(), token=None).status_code == 403
     assert post(client, package(), token="bogus").status_code == 403
