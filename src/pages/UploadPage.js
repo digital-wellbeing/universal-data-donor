@@ -172,7 +172,7 @@ const UploadPage = ({ setParsedData }) => {
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             style={{
-              border: `2px dashed ${dragging ? '#1976d2' : '#9e9e9e'}`,
+              border: `2px dashed ${dragging ? 'var(--ud-accent)' : '#9e9e9e'}`,
               background: dragging ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
               borderRadius: 8,
               padding: 16,
