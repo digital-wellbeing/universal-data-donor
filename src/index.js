@@ -1,19 +1,23 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './theme.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 import { ConfigProvider } from './ConfigContext';
+import ThemeLoader from './ThemeLoader';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <ConfigProvider>
-      <BrowserRouter basename="/datadonation">
-        <App />
-      </BrowserRouter>
-    </ConfigProvider>
+    <ThemeLoader>
+      <ConfigProvider>
+        <BrowserRouter basename="/datadonation">
+          <App />
+        </BrowserRouter>
+      </ConfigProvider>
+    </ThemeLoader>
   </React.StrictMode>
 );
 

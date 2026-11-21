@@ -1,0 +1,42 @@
+/* Colours come from the active theme (src/utils/theme.js sets these variables). The values
+   here are the fallback when no theme could be loaded. */
+:root {
+  --ud-primary: #1976d2;
+  --ud-primary-hover: #1565c0;
+  --ud-on-primary: #ffffff;
+  --ud-on-primary-hover: #ffffff;
+  --ud-secondary: #6c757d;
+  --ud-accent: #dee2e6;
+  --ud-link: #1976d2;
+  --ud-header-bg: #f7f7f7;
+  --ud-header-text: #212529;
+}
+
+a { color: var(--ud-link); }
+
+.btn.btn-primary {
+  background-color: var(--ud-primary);
+  border-color: var(--ud-primary);
+  color: var(--ud-on-primary);
+}
+.btn.btn-primary:hover:not(:disabled),
+.btn.btn-primary:focus:not(:disabled) {
+  background-color: var(--ud-primary-hover);
+  border-color: var(--ud-primary-hover);
+  color: var(--ud-on-primary-hover);
+}
+.btn.btn-outline-primary {
+  color: var(--ud-primary);
+  border-color: var(--ud-primary);
+}
+.btn.btn-outline-primary:hover {
+  background-color: var(--ud-primary);
+  color: var(--ud-on-primary);
+}
+.btn.btn-link { color: var(--ud-link); }
+
+.card-header {
+  background-color: var(--ud-header-bg);
+  color: var(--ud-header-text);
+  border-bottom: 4px solid var(--ud-accent);
+}

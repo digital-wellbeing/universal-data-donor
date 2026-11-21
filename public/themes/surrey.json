@@ -1,0 +1,14 @@
+{
+  "name": "University of Surrey",
+  "colors": {
+    "primary": "#25384A",
+    "primaryHover": "#F7D38B",
+    "onPrimary": "#FFFFFF",
+    "onPrimaryHover": "#25384A",
+    "secondary": "#51606E",
+    "accent": "#F1B53D",
+    "link": "#356EF0",
+    "headerBackground": "#25384A",
+    "headerText": "#FFFFFF"
+  }
+}
