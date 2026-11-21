@@ -36,8 +36,14 @@ SUBMISSION_ID_RE = re.compile(r"^\d{16}$")
 
 ALLOWED_TOP_LEVEL_KEYS = {
     "submissionId", "timestamp", "platform", "data", "deletedRowCounts",
-    "parsingErrors", "windowFilter", "appliedFilters", "metadata",
+    "parsingErrors", "windowFilter", "appliedFilters", "metadata", "studyInfo",
 }
+
+# Optional study label from the page URL (`?study=...&ethics=...`): null, or an object whose
+# only keys are study and ethics, each null or a short string. The client cleans and caps both
+# at 120 characters; this is only a label, never proof of ethics approval.
+STUDY_INFO_KEYS = {"study", "ethics"}
+MAX_STUDY_INFO_LEN = 120
 
 # Exact table names for platforms whose parsers are known. Other platforms get the
 # structural checks only (their tables are not enumerated here).
@@ -86,6 +92,17 @@ def _check_rows(table, rows, seen_keys):
     return len(rows)
 
 
+def _check_study_info(info):
+    """studyInfo is absent, null, or {study, ethics} with each value null or a short string."""
+    if info is None:
+        return
+    if type(info) is not dict or not set(info) <= STUDY_INFO_KEYS:
+        raise PayloadError("studyInfo is not null or an object with only study and ethics")
+    for value in info.values():
+        if value is not None and (type(value) is not str or len(value) > MAX_STUDY_INFO_LEN):
+            raise PayloadError("studyInfo values must be null or strings of at most 120 characters")
+
+
 def validate_donation(donation, platform):
     """Validate `donation` for `platform`; return (total_tables, total_rows).
 
@@ -105,6 +122,8 @@ def validate_donation(donation, platform):
     declared = donation.get("platform")
     if declared is not None and str(declared).lower() != platform:
         raise PayloadError("platform inside the donation differs from the request platform")
+
+    _check_study_info(donation.get("studyInfo"))
 
     non_data = {k: v for k, v in donation.items() if k != "data"}
     try:
