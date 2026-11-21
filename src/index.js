@@ -1,19 +1,32 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './theme.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 import { ConfigProvider } from './ConfigContext';
+import ThemeLoader from './ThemeLoader';
+import Header from './components/Header';
+import Footer from './components/Footer';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <ConfigProvider>
+    <ThemeLoader>
       <BrowserRouter basename="/datadonation">
-        <App />
+        <div className="ud-app">
+          <a className="ud-skip-link" href="#main-content">Skip to main content</a>
+          <Header />
+          <main id="main-content" className="ud-app-main" tabIndex={-1}>
+            <ConfigProvider>
+              <App />
+            </ConfigProvider>
+          </main>
+          <Footer />
+        </div>
       </BrowserRouter>
-    </ConfigProvider>
+    </ThemeLoader>
   </React.StrictMode>
 );
 

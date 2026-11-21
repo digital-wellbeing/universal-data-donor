@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 import PlatformSelector from './components/PlatformSelector';
 import { getStudyInfo } from './utils/studyInfo';
 
@@ -13,6 +14,8 @@ export const ConfigProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showPlatformSelector, setShowPlatformSelector] = useState(false);
+  // Information pages need no platform, so they show on their own route, also from the platform picker.
+  const onInfoPage = /^\/(about|cookies|accessibility)\/?$/.test(useLocation().pathname);
 
   const fetchConfig = async (platform) => {
     try {
@@ -57,6 +60,10 @@ export const ConfigProvider = ({ children }) => {
   const handlePlatformSelect = (platform) => {
     fetchConfig(platform);
   };
+
+  if (onInfoPage) {
+    return <ConfigContext.Provider value={config}>{children}</ConfigContext.Provider>;
+  }
 
   if (loading) {
     return <div>Loading configuration...</div>;

@@ -1,0 +1,33 @@
+{
+  "title": "Cookies and browser storage",
+  "intro": "This tool follows the University of Surrey's approach to cookies: only essential cookies, no analytics, no advertising or marketing cookies, and no personal information stored in cookies.",
+  "sections": [
+    {
+      "heading": "What this website stores on your device",
+      "items": [
+        "Cookies: none. This website does not set any cookies of its own.",
+        "Browser storage: one small item, dd_filter_tour_seen_v1, which remembers that you have seen the guided tour on the page where you review your data, so it is not shown again. It stays on your device and is never sent to us. You can delete it in your browser settings.",
+        "Your data: the file you select is read and kept in your browser's memory only while the page is open. It is not saved in cookies or browser storage, and nothing is sent anywhere until you press \"Yes, donate\"."
+      ]
+    },
+    {
+      "heading": "Cloudflare security check",
+      "paragraphs": [
+        "To protect the donation step from automated misuse, this website loads Cloudflare Turnstile from challenges.cloudflare.com. Cloudflare receives your IP address and basic browser details for this check, and may use cookies or browser storage for security purposes only. This is not used for advertising or analytics."
+      ]
+    },
+    {
+      "heading": "Analytics and advertising",
+      "paragraphs": [
+        "This website does not use analytics, tracking or advertising tools. If that ever changes, we will ask for your consent first and list the cookies here."
+      ]
+    },
+    {
+      "heading": "University of Surrey cookie policy",
+      "paragraphs": [
+        "The University's cookie policy describes the cookies used on the University's main website, which is a separate website from this tool."
+      ],
+      "links": [{ "label": "University of Surrey cookie policy", "href": "https://www.surrey.ac.uk/cookies" }]
+    }
+  ]
+}
