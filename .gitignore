@@ -38,3 +38,6 @@ server/datadonation-api.env
 /tests/takeout-*
 /tests/*.xlsx
 /tests/*.zip
+
+# Playwright MCP scratch output (screenshots, snapshots, logs)
+.playwright-mcp/
