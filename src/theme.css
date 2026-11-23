@@ -53,8 +53,15 @@ a { color: var(--ud-link); }
 }
 .ud-footer a,
 .ud-footer a:visited { color: var(--ud-header-text); text-decoration: underline; }
+/* Hover/focus is a thicker underline in the same colour: an accent colour can be too close to the footer background (default theme). */
 .ud-footer a:hover,
-.ud-footer a:focus { color: var(--ud-accent); }
+.ud-footer a:focus { color: var(--ud-header-text); text-decoration-thickness: 0.2em; }
+.ud-footer-reveal {
+  background: none; border: 0; padding: 0; font: inherit; cursor: pointer;
+  color: var(--ud-header-text); text-decoration: underline;
+}
+.ud-footer-reveal:hover,
+.ud-footer-reveal:focus { color: var(--ud-header-text); text-decoration-thickness: 0.2em; }
 .ud-footer-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
 .ud-footer address { font-style: normal; }
 .ud-footer li { padding: 0.2rem 0; }

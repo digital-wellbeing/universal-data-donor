@@ -1,12 +1,12 @@
 {
   "copyright": "Universal Data Donor contributors",
   "phone": {
-    "label": "+44 1483 686482",
-    "href": "tel:+441483686482"
+    "reveal": "Show phone number",
+    "encoded": "KzQ0IDE0ODMgNjg2NDgy"
   },
   "contact": {
-    "label": "Contact us",
-    "href": "mailto:t.foldes@surrey.ac.uk"
+    "reveal": "Show email address",
+    "encoded": "dC5mb2xkZXNAc3VycmV5LmFjLnVr"
   },
   "links": [
     {
