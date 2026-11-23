@@ -1,4 +1,5 @@
 import React from 'react';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { render as rtlRender, screen, within, fireEvent } from '@testing-library/react';
@@ -36,10 +37,10 @@ test('shows organisation, address, map, phone, contact, legal links and the year
 });
 
 test('Contact us can be a mailto link and does not open a new tab', async () => {
-  withFooter({ ...full, contact: { label: 'Contact us', href: 'mailto:t.foldes@surrey.ac.uk' } });
+  withFooter({ ...full, contact: { label: 'Contact us', href: 'mailto:team@example.ac.uk' } });
   render(<Footer />);
   const contact = await screen.findByRole('link', { name: 'Contact us' });
-  expect(contact).toHaveAttribute('href', 'mailto:t.foldes@surrey.ac.uk');
+  expect(contact).toHaveAttribute('href', 'mailto:team@example.ac.uk');
   expect(contact).not.toHaveAttribute('target');
 });
 
@@ -146,11 +147,17 @@ describe('contact details hidden from scrapers', () => {
     expect(await screen.findByRole('link', { name: '+44 (0)1483 300800' })).toHaveAttribute('href', 'tel:+441483300800');
   });
 
-  test('the real footer.json keeps the number and email out of plain text, and they decode correctly', () => {
+  test('the real footer.json keeps the number and email out of plain text, and they still decode to valid values', () => {
+    // Compared by hash so this test file does not itself contain the real details.
+    const sha = (value) => crypto.createHash('sha256').update(value).digest('hex');
     const file = fs.readFileSync(path.join(__dirname, '../../public/footer.json'), 'utf8');
-    expect(file).not.toMatch(/686482|foldes|@surrey|mailto:|tel:/);
+    expect(file).not.toMatch(/mailto:|tel:|@|\+\d/);
     const real = sanitizeFooter(JSON.parse(file));
-    expect(decodeContact(real.phone)).toEqual({ label: '+44 1483 686482', href: 'tel:+441483686482' });
-    expect(decodeContact(real.contact)).toEqual({ label: 't.foldes@surrey.ac.uk', href: 'mailto:t.foldes@surrey.ac.uk' });
+    const phone = decodeContact(real.phone);
+    const email = decodeContact(real.contact);
+    expect(sha(phone.label)).toBe('a994f21f4a07baaed8eee24c9c8c309241d321a49bbb139dcd14544fb4b076b4');
+    expect(phone.href).toBe(`tel:${phone.label.replace(/[^\d+]/g, '')}`);
+    expect(sha(email.label)).toBe('df645ce638ff4c28eabd9c6db853391f04fe43736cc6fa9ed4a6d1941a681bc9');
+    expect(email.href).toBe(`mailto:${email.label}`);
   });
 });
