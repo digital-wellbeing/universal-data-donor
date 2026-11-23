@@ -1,12 +1,12 @@
 {
   "copyright": "Universal Data Donor contributors",
   "phone": {
-    "label": "REDACTED-PHONE",
-    "href": "tel:REDACTED-PHONE"
+    "reveal": "Show phone number",
+    "encoded": "KzQ0IDE0ODMgNjg2NDgy"
   },
   "contact": {
-    "label": "Contact us",
-    "href": "mailto:REDACTED-EMAIL"
+    "reveal": "Show email address",
+    "encoded": "dC5mb2xkZXNAc3VycmV5LmFjLnVr"
   },
   "links": [
     {

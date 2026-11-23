@@ -1,8 +1,10 @@
 import React from 'react';
-import { render as rtlRender, screen, within } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
+import { render as rtlRender, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Footer from './Footer';
-import { sanitizeFooter } from '../utils/footerConfig';
+import { sanitizeFooter, decodeContact } from '../utils/footerConfig';
 
 const render = (ui) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
@@ -93,5 +95,62 @@ describe('sanitizeFooter', () => {
   test('null for junk or an empty footer', () => {
     expect(sanitizeFooter(null)).toBeNull();
     expect(sanitizeFooter({})).toBeNull();
+  });
+});
+
+describe('contact details hidden from scrapers', () => {
+  const hidden = {
+    ...full,
+    phone: { reveal: 'Show phone number', encoded: btoa('+44 1483 123456') },
+    contact: { reveal: 'Show email address', encoded: btoa('someone@example.ac.uk') },
+  };
+
+  test('the phone number and email are not in the page or any link until a button is pressed', async () => {
+    withFooter(hidden);
+    const { container } = render(<Footer />);
+    const footer = await screen.findByRole('contentinfo');
+    expect(within(footer).getByRole('button', { name: 'Show phone number' })).toBeInTheDocument();
+    expect(within(footer).getByRole('button', { name: 'Show email address' })).toBeInTheDocument();
+    expect(container.innerHTML).not.toMatch(/123456|someone@example|mailto:|tel:/);
+  });
+
+  test('pressing a button reveals a real tel: or mailto: link and moves focus to it', async () => {
+    withFooter(hidden);
+    render(<Footer />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Show phone number' }));
+    const phone = screen.getByRole('link', { name: '+44 1483 123456' });
+    expect(phone).toHaveAttribute('href', 'tel:+441483123456');
+    expect(phone).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Show phone number' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show email address' }));
+    const email = screen.getByRole('link', { name: 'someone@example.ac.uk' });
+    expect(email).toHaveAttribute('href', 'mailto:someone@example.ac.uk');
+    expect(email).toHaveFocus();
+  });
+
+  test('a value that does not decode to a phone number or email is dropped, never shown', () => {
+    const footer = sanitizeFooter({
+      ...full,
+      phone: { reveal: 'x', encoded: btoa('<script>alert(1)</script>') },
+      contact: { reveal: 'x', encoded: '%%%not-base64%%%' },
+    });
+    expect(footer.phone).toBeNull();
+    expect(footer.contact).toBeNull();
+    expect(decodeContact({ kind: 'contact', encoded: btoa('javascript:alert(1)') })).toBeNull();
+  });
+
+  test('ordinary label/href contact links keep working', async () => {
+    withFooter(full);
+    render(<Footer />);
+    expect(await screen.findByRole('link', { name: '+44 (0)1483 300800' })).toHaveAttribute('href', 'tel:+441483300800');
+  });
+
+  test('the real footer.json keeps the number and email out of plain text, and they decode correctly', () => {
+    const file = fs.readFileSync(path.join(__dirname, '../../public/footer.json'), 'utf8');
+    expect(file).not.toMatch(/REDACTED-PHONE|foldes|@surrey|mailto:|tel:/);
+    const real = sanitizeFooter(JSON.parse(file));
+    expect(decodeContact(real.phone)).toEqual({ label: 'REDACTED-PHONE', href: 'tel:REDACTED-PHONE' });
+    expect(decodeContact(real.contact)).toEqual({ label: 'REDACTED-EMAIL', href: 'mailto:REDACTED-EMAIL' });
   });
 });
