@@ -18,8 +18,15 @@ const ConsentPage = () => {
     return <div>Loading...</div>;
   }
 
+  const consent = config.page.consent;
   // Optional: a service-by-service statement of what is requested and what is read.
-  const scope = config.page.consent.dataScope;
+  const scope = consent.dataScope;
+  // Optional: who runs the study, how data is stored and used, and how to withdraw.
+  const sections = Array.isArray(consent.sections) ? consent.sections : [];
+  // When the config states the ethics status itself, that statement is the only one shown:
+  // the ?ethics= URL parameter is free text anyone can set, so it must not contradict it.
+  const urlInfo = getStudyInfo();
+  const shownInfo = consent.ethics && urlInfo ? { ...urlInfo, ethics: null } : urlInfo;
 
   return (
     <div className="container mt-5">
@@ -37,8 +44,9 @@ const ConsentPage = () => {
           </div>
         </div>
         <div className="card-body">
-          <p>{insertStudyInfo(config.page.consent.intro, getStudyInfo())}</p>
-          <p>{config.page.consent.process}</p>
+          <p>{insertStudyInfo(consent.intro, shownInfo)}</p>
+          {consent.ethics && <p data-testid="ethics-statement"><strong>{consent.ethics}</strong></p>}
+          <p>{consent.process}</p>
           {scope && (
             <div className="mb-3 p-3 border rounded bg-light" data-testid="data-scope">
               <h2 className="h6">{scope.title}</h2>
@@ -60,6 +68,24 @@ const ConsentPage = () => {
               {scope.otherServices && <p className="mb-0">{scope.otherServices}</p>}
             </div>
           )}
+          {sections.map((section) => (
+            <section key={section.title} className="mb-3" data-testid="consent-section">
+              <h2 className="h6">{section.title}</h2>
+              {(section.paragraphs || []).map((text) => <p key={text} className="mb-2">{text}</p>)}
+              {section.items && (
+                <ul className="mb-2">
+                  {section.items.map((text) => <li key={text}>{text}</li>)}
+                </ul>
+              )}
+              {(section.links || []).map((link) => (
+                <p key={link.href} className="mb-2">
+                  {/^https?:/i.test(link.href)
+                    ? <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                    : <a href={link.href}>{link.label}</a>}
+                </p>
+              ))}
+            </section>
+          ))}
           <p><strong>{config.page.consent.donationAgreement}</strong></p>
           <ul>
             {config.page.consent.agreementPoints.map((point, index) => (
