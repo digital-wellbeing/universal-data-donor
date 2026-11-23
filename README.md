@@ -456,7 +456,7 @@ colours from the active theme and stacks into one column on phones.
   address is in `footer.json` or in the page HTML. The footer shows a button; pressing it
   decodes the value, replaces the button with a real `tel:`/`mailto:` link and moves focus
   to it (keyboard and screen-reader friendly). To change one, encode the new value:
-  `printf '%s' 'REDACTED-EMAIL' | base64` and paste the result into `encoded`.
+  `printf '%s' 'name@example.ac.uk' | base64` and paste the result into `encoded`.
   A value that does not decode to a phone number or an email address is dropped.
   This stops harvesters that read the page or the JSON; it does not stop a bot that runs
   the page, presses the button and decodes it, and it cannot hide anything already in
