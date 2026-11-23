@@ -85,6 +85,70 @@ describe('Google Takeout consent (real config)', () => {
   });
 });
 
+describe('ConsentPage sections', () => {
+  test('renders no sections when none are configured', () => {
+    renderWith(base({}));
+    expect(screen.queryAllByTestId('consent-section')).toHaveLength(0);
+  });
+
+  test('renders paragraphs, items and links; web links open in a new tab, mailto does not', () => {
+    renderWith(base({
+      sections: [{
+        title: 'Sec A', paragraphs: ['para a'], items: ['item a'],
+        links: [{ label: 'Web', href: 'https://example.org' }, { label: 'Mail', href: 'mailto:x@example.org' }],
+      }, { title: 'Sec B', paragraphs: ['para b'] }],
+    }));
+    const [a, b] = screen.getAllByTestId('consent-section');
+    expect(within(a).getByText('Sec A')).toBeInTheDocument();
+    expect(within(a).getByText('item a').tagName).toBe('LI');
+    expect(within(a).getByText('Web')).toHaveAttribute('target', '_blank');
+    expect(within(a).getByText('Mail')).not.toHaveAttribute('target');
+    expect(within(b).getByText('para b')).toBeInTheDocument();
+  });
+});
+
+describe('Google Takeout consent: who, storage, use and withdrawal (real config)', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config-googletakeout.json'), 'utf8'));
+  const pageText = () => document.body.textContent;
+
+  test('names the University of Surrey as controller and gives a contact', () => {
+    renderWith(config);
+    expect(pageText()).toMatch(/University of Surrey is the data controller/);
+    expect(pageText()).toMatch(/REDACTED-EMAIL/);
+  });
+
+  test('discloses the stored IP hash and browser string, encryption, Cloudflare and the 10-year retention', () => {
+    renderWith(config);
+    expect(pageText()).toMatch(/scrambled code made from your IP address \(the address itself is not stored\)/);
+    expect(pageText()).toMatch(/browser's identification string/);
+    expect(pageText()).toMatch(/encrypted as soon as it reaches our server/);
+    expect(pageText()).toMatch(/Cloudflare receives your IP address/);
+    expect(pageText()).toMatch(/kept for 10 years after the study ends/);
+  });
+
+  test('says pseudonymised, not anonymous, and that only aggregate results are published', () => {
+    renderWith(config);
+    expect(pageText()).not.toMatch(/\bwill be anonymous\b/);
+    expect(pageText()).toMatch(/pseudonymised, not anonymous/);
+    expect(pageText()).toMatch(/only aggregate results/);
+    expect(pageText()).not.toMatch(/publicly available/);
+  });
+
+  test('explains withdrawal by submission ID within 1 month, and the lawful basis', () => {
+    renderWith(config);
+    expect(pageText()).toMatch(/withdraw within 1 month: email REDACTED-EMAIL with your submission ID/);
+    expect(pageText()).toMatch(/can no longer be withdrawn/);
+    expect(pageText()).toMatch(/Article 6\(1\)\(e\)/);
+    expect(pageText()).toMatch(/Article 9\(2\)\(j\)/);
+    expect(config.page.consent.agreementPoints.join(' ')).toMatch(/explicitly and voluntarily agree.*health data/);
+  });
+
+  test('the thank-you page says why the submission ID matters', () => {
+    expect(config.page.thankyou.saveId).toMatch(/only way to find your donation/);
+    expect(config.page.thankyou.saveId).toMatch(/withdraw within 1 month/);
+  });
+});
+
 describe('ConsentPage study details from the URL', () => {
   const { resetStudyInfo } = require('../utils/studyInfo');
   const visit = (search) => {
@@ -100,6 +164,22 @@ describe('ConsentPage study details from the URL', () => {
     visit('?study=Screen%20Time%20Study&ethics=ETH-2026-001');
     renderWith(base({ intro: 'donating data to our study. More.' }));
     expect(screen.getByText('donating data to our study (Screen Time Study; ethics approval: ETH-2026-001). More.')).toBeInTheDocument();
+  });
+
+  test('a configured ethics statement replaces the ethics code from the URL, which anyone can set', () => {
+    visit('?study=Screen%20Time%20Study&ethics=FAKE-APPROVAL');
+    renderWith(base({ intro: 'donating data to our study. More.', ethics: 'Awaiting ethical review.' }));
+    expect(screen.getByText('donating data to our study (Screen Time Study). More.')).toBeInTheDocument();
+    expect(screen.getByTestId('ethics-statement')).toHaveTextContent('Awaiting ethical review.');
+    expect(document.body.textContent).not.toMatch(/FAKE-APPROVAL/);
+  });
+
+  test('the real Takeout config states its ethics status and ignores the URL code', () => {
+    visit('?ethics=FAKE-APPROVAL');
+    const real = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config-googletakeout.json'), 'utf8'));
+    renderWith(real);
+    expect(screen.getByTestId('ethics-statement')).toHaveTextContent(/awaiting review by the University of Surrey's ethics committee/);
+    expect(document.body.textContent).not.toMatch(/FAKE-APPROVAL/);
   });
 
   test('shows the text unchanged without parameters', () => {
