@@ -482,6 +482,10 @@ Both policies are written for the University's own website, so these pages descr
 - **Cookies:** the tool sets no cookies, has no analytics or advertising, and keeps a
   single `localStorage` item (`dd_filter_tour_seen_v1`, the "tour seen" flag). The one
   third party is Cloudflare Turnstile (the bot check), which loads on every page.
+  Cookies set by www.surrey.ac.uk can be scoped to the whole `surrey.ac.uk` domain, so a
+  browser may send them to this site too; the cookie page says they are not ours and are
+  not read, used or stored (the API never reads the `Cookie` header, and Caddy redacts it
+  in access logs unless `log_credentials` is enabled on the host).
   A test checks that the cookie page names the key the code really uses. **If you add
   analytics or any non-essential cookie, ask for consent first and update
   `public/content/cookies.json`.**
