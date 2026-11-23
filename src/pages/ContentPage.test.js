@@ -66,4 +66,11 @@ describe('the shipped statements', () => {
     expect(JSON.stringify(raw)).toContain(key);
     expect(JSON.stringify(raw)).toMatch(/Cookies: none/);
   });
+
+  test('the cookie statement explains cookies that arrive from other surrey.ac.uk websites', () => {
+    const raw = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/content/cookies.json'), 'utf8'));
+    const section = raw.sections.find((s) => /other University of Surrey websites/.test(s.heading));
+    expect(section).toBeDefined();
+    expect(section.paragraphs.join(' ')).toMatch(/did not set them, does not read or use them, and does not store them/);
+  });
 });
