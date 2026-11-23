@@ -451,10 +451,20 @@ colours from the active theme and stacks into one column on phones.
   endorses the site. The line is omitted when `copyright` is empty.
 - Links may be `https:`, `http:`, `tel:`, `mailto:` or an in-app path such as `/about`;
   anything else, and entries with no label, are ignored. Web links open in a new tab.
-- "Contact us" is a `mailto:` link to the project's contact address (currently the
-  main developer's university email). To use a contact page or form instead, change
-  `contact.href`. To point participants at the study's participant information or
-  privacy notice, add it under `links`.
+- **Phone and email are hidden from scrapers.** `phone` and `contact` are stored as
+  `{ "reveal": "Show phone number", "encoded": "<base64>" }`, so neither the number nor the
+  address is in `footer.json` or in the page HTML. The footer shows a button; pressing it
+  decodes the value, replaces the button with a real `tel:`/`mailto:` link and moves focus
+  to it (keyboard and screen-reader friendly). To change one, encode the new value:
+  `printf '%s' 'name@example.ac.uk' | base64` and paste the result into `encoded`.
+  A value that does not decode to a phone number or an email address is dropped.
+  This stops harvesters that read the page or the JSON; it does not stop a bot that runs
+  the page, presses the button and decodes it, and it cannot hide anything already in
+  the git history or on other public pages. The plain `{label, href}` form still works for
+  a contact page or form (change `contact.href`). To point participants at the study's
+  participant information or privacy notice, add it under `links`.
+  The consent text and the Accessibility page still print the email in plain text on
+  purpose, so participants can find out how to withdraw.
 - Code: `src/components/Footer.js`, `src/utils/footerConfig.js`, `src/theme.css`.
 
 ### About page

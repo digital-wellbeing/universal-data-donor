@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { loadFooter } from '../utils/footerConfig';
+import { loadFooter, decodeContact } from '../utils/footerConfig';
 
 const External = ({ href, children }) => {
   if (href.startsWith('/')) return <Link to={href}>{children}</Link>; // in-app page, e.g. /about
@@ -11,6 +11,25 @@ const External = ({ href, children }) => {
     </a>
   );
 };
+
+/**
+ * A phone number or email address kept out of the page until someone asks for it: a button
+ * that decodes it on press and replaces itself with the link (focus moves to the link, so
+ * keyboard and screen-reader users land on the revealed value).
+ */
+const Reveal = ({ item }) => {
+  const [revealed, setRevealed] = useState(null);
+  const linkRef = useRef(null);
+  useEffect(() => { if (revealed && linkRef.current) linkRef.current.focus(); }, [revealed]);
+  if (revealed) return <a ref={linkRef} href={revealed.href}>{revealed.label}</a>;
+  return (
+    <button type="button" className="ud-footer-reveal" onClick={() => setRevealed(decodeContact(item))}>
+      {item.reveal}
+    </button>
+  );
+};
+
+const Contact = ({ item }) => (item.encoded ? <Reveal item={item} /> : <External href={item.href}>{item.label}</External>);
 
 /** Site footer: organisation, address with map link, phone, contact, legal links and © year (the copyright holder is its own setting, never the organisation). */
 export default function Footer({ year = new Date().getFullYear() }) {
@@ -45,8 +64,8 @@ export default function Footer({ year = new Date().getFullYear() }) {
             <div className="col-md mb-3">
               <h2 className="ud-footer-title">Contact</h2>
               <ul className="list-unstyled mb-0">
-                {phone && <li><External href={phone.href}>{phone.label}</External></li>}
-                {contact && <li><External href={contact.href}>{contact.label}</External></li>}
+                {phone && <li><Contact item={phone} /></li>}
+                {contact && <li><Contact item={contact} /></li>}
               </ul>
             </div>
           )}
