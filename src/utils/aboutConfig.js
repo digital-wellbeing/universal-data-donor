@@ -5,11 +5,17 @@
 const text = (value, max = 400) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 const webHref = (href) => (/^https?:\/\//i.test(text(href, 500)) ? text(href, 500) : '');
 
+/** A photo is a path inside public/ (e.g. "images/team/ada.jpg"); absolute URLs and ".." are rejected. */
+const photoPath = (value) => {
+  const path = text(value, 200).replace(/^\/+/, '');
+  return /^[\w\-./]+\.(jpe?g|png|webp)$/i.test(path) && !path.includes('..') ? path : '';
+};
+
 const person = (raw) => {
   const name = text(raw && raw.name, 80);
   if (!name) return null;
   return {
-    name, role: text(raw.role, 120), detail: text(raw.detail, 120), href: webHref(raw.href), newRow: raw.newRow === true,
+    name, role: text(raw.role, 120), detail: text(raw.detail, 120), href: webHref(raw.href), photo: photoPath(raw.photo), newRow: raw.newRow === true,
   };
 };
 
