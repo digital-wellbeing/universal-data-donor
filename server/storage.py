@@ -90,6 +90,9 @@ def ssl_argument(mode, ca_file=None):
     raise ValueError(f"unknown MySQL ssl mode: {mode!r}")
 
 
+# TODO(governance): the consent text says donations are "stored on servers managed by the
+# University of Surrey". Confirm that the Azure-hosted MySQL instance counts as such (check with
+# the DPO / IT), or reword that sentence in every public/config-*.json.
 class MysqlStore:
     """Donations in MySQL: one metadata row plus the ciphertext in <= 4 MiB chunks, one transaction."""
 

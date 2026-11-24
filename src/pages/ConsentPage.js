@@ -23,6 +23,9 @@ const ConsentPage = () => {
   const scope = consent.dataScope;
   // Optional: who runs the study, how data is stored and used, and how to withdraw.
   const sections = Array.isArray(consent.sections) ? consent.sections : [];
+  // TODO(ethics): once the ethics committee has approved the study, replace `page.consent.ethics`
+  // with the approval reference in all 11 public/config-*.json files (it currently says the study
+  // is awaiting review). Then update the "awaiting review" assertion in ConsentPage.test.js.
   // When the config states the ethics status itself, that statement is the only one shown:
   // the ?ethics= URL parameter is free text anyone can set, so it must not contradict it.
   const urlInfo = getStudyInfo();
