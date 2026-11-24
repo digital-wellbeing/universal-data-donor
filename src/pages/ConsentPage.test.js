@@ -149,6 +149,10 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
   });
 });
 
+// TODO(dpo): the consent text in public/config-*.json states 10-year retention, withdrawal within
+// 1 month, aggregate-only publication and UK GDPR Art 6(1)(e) public task (+ Art 9(2)(j) for health
+// platforms). Check each against the DPO's advice and the ethics application, then update the
+// configs and the assertions below if they differ.
 describe('every platform consent discloses controller, storage, use and withdrawal', () => {
   const publicDir = path.join(__dirname, '../../public');
   const configs = fs.readdirSync(publicDir)
