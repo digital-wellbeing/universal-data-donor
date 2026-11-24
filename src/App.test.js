@@ -4,7 +4,7 @@ import App from './App';
 import { ConfigContext } from './ConfigContext';
 
 // The real PlayStation config (the shape the app reads: `general`, `header`, `page`).
-const config = require('../public/config-playstation.json');
+const config = require('../public/config/platforms/playstation.json');
 
 test('renders consent page on initial load', () => {
   render(

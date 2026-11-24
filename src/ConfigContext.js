@@ -25,7 +25,7 @@ export const ConfigProvider = ({ children }) => {
       const validPlatforms = ['playstation', 'android', 'activitywatch', 'googlefit', 'garmin', 'applehealth', 'healthconnect', 'fitbit', 'samsunghealth', 'instagram', 'googletakeout'];
       const safePlatform = validPlatforms.includes(platform) ? platform : 'playstation';
 
-      const response = await fetch(`${process.env.PUBLIC_URL}/config-${safePlatform}.json`);
+      const response = await fetch(`${process.env.PUBLIC_URL}/config/platforms/${safePlatform}.json`);
       if (!response.ok) {
         throw new Error('Failed to fetch config');
       }

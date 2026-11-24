@@ -301,7 +301,7 @@ once to point Caddy at the containers. Manual deploy or rollback on the host:
 
 ### Recent Updates
 - **Colour themes**: the look is set by `public/themes/<name>.json` (University of Surrey by default; `?theme=default` for the neutral one; see [Colour themes](#colour-themes))
-- **About page**: `/about` describes the tool and lists the project team, edited in `public/about.json` (see [About page](#about-page))
+- **About page**: `/about` describes the tool and lists the project team, edited in `public/config/about.json` (see [About page](#about-page))
 - **Footer**: a brand block (logo, name, tagline, © year, GitHub link) and Support / Legal link columns, set in `public/footer.json` (see [Footer](#footer))
 - **Study details in the URL**: optional `?study=` and `?ethics=` parameters appear in parentheses after "our study" on the consent page and are saved as `studyInfo` in the donation (see [Study details in the URL](#study-details-in-the-url-optional))
 - **Play Movies & TV**: the Google Takeout parser now reads the watchlist and viewing history (titles and dates)
@@ -335,7 +335,7 @@ To add support for a new platform:
 1. Create a new parser in `src/parsers/[platform]Parser.js`
 2. Create a new validator in `src/validators/[platform]Validator.js`
 3. Register both in `parserFactory.js` and `validatorFactory.js`
-4. Create a configuration file in `public/config-[platform].json`
+4. Create a configuration file in `public/config/platforms/[platform].json`
 5. Add the platform name to the `validPlatforms` array in `ConfigContext.js`
 6. Add a card (and its id in `ENABLED_PLATFORM_IDS`) in `PlatformSelector.js`
 7. Add the id to `ALLOWED_PLATFORMS` in `server/app.py`, or submissions are rejected with `unknown_platform`
@@ -429,7 +429,7 @@ https://iemabot.surrey.ac.uk/datadonation/?platform=googletakeout&theme=default
 
 Every page starts with a header panel that matches the footer (same theme colours and
 accent rule): the tool's name, linking to the start page, a one-line description and
-an "About" link. Its text is `public/header.json` (`title`, `tagline`); delete the file
+an "About" link. Its text is `public/config/header.json` (`title`, `tagline`); delete the file
 to show no header. The platform picker (homepage) sits on a plain light background
 between the two panels. Code: `src/components/Header.js`, `src/utils/headerConfig.js`,
 `src/theme.css`.
@@ -472,7 +472,7 @@ source code and lists the project team, with a link to each person's profile whe
 there is one. It works without `?platform=` (it does not need a platform config), so
 it can be opened or shared directly.
 
-- **Edit it:** the content is `public/about.json`: `title`, `paragraphs`, `source`
+- **Edit it:** the content is `public/config/about.json`: `title`, `paragraphs`, `source`
   (`{label, href}`), `peopleTitle` and `people` (each `{name, role, detail, href}`,
   `href` optional; `"newRow": true` starts a new row in the team grid). Only `https:`/`http:` links are used. Email addresses are
   deliberately not shown.
@@ -533,10 +533,18 @@ src/
 └── App.js              # Main application component
 
 public/
-├── config-playstation.json  # PlayStation configuration
-├── config-android.json      # Google Play Games configuration
-├── playstation-svgrepo-com.svg
-└── android-logo.svg
+├── index.html, manifest.json, robots.txt   # browser entry points (kept at the root)
+├── favicon.ico, apple-touch-icon.png, logo192.png, logo512.png
+├── footer.json              # footer content
+├── config/
+│   ├── platforms/           # one <platform>.json per data source (playstation, android, ...)
+│   ├── header.json          # site title and tagline
+│   └── about.json           # About page text
+├── images/
+│   └── platforms/           # one <platform>.svg logo per data source
+├── content/                 # statement pages (cookies, accessibility)
+├── themes/                  # colour themes
+└── vendor/                  # bundled third-party CSS and icons
 ```
 
 ## Contributing

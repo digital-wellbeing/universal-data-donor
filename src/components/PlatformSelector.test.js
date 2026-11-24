@@ -15,7 +15,7 @@ describe('PlatformSelector', () => {
 
     const logo = tile.querySelector('img.platform-logo');
     expect(logo).not.toBeNull();
-    expect(logo.getAttribute('src')).toMatch(/googletakeout-logo\.svg$/);
+    expect(logo.getAttribute('src')).toMatch(/googletakeout\.svg$/);
 
     expect(tile.closest('section').querySelector('h2').textContent).toBe('Screen time & gaming');
   });

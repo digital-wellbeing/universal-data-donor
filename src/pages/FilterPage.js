@@ -189,7 +189,7 @@ const FilterPage = ({ parsedData }) => {
   const submitUrl = `${process.env.PUBLIC_URL}/submit`;
 
   // Largest donation the server accepts (mirrors the server's MAX_BYTES, default 25 MiB).
-  // Override per platform with `general.maxDonationBytes` in config-<id>.json.
+  // Override per platform with `general.maxDonationBytes` in config/platforms/<id>.json.
   const maxDonationBytes = Number(config?.general?.maxDonationBytes) || 25 * 1024 * 1024;
   const formatMb = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   const tooLargeMessage = (bytes) =>

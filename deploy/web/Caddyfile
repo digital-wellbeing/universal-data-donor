@@ -19,7 +19,7 @@
 		file_server
 	}
 
-	# Everything else (index.html, config-*.json, logos) revalidates so a
+	# Everything else (index.html, config/*.json, images) revalidates so a
 	# redeploy is picked up immediately. Unknown paths get the SPA shell.
 	handle {
 		header Cache-Control "no-cache"
