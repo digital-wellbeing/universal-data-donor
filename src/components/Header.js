@@ -4,7 +4,7 @@ import { loadHeader } from '../utils/headerConfig';
 
 /**
  * Site header panel, the counterpart of the footer: the tool's name (a link to the start
- * page), a one-line description and a link to the About page. Text from public/header.json.
+ * page), a one-line description and a link to the About page. Text from public/config/header.json.
  */
 export default function Header() {
   const [header, setHeader] = useState(null);

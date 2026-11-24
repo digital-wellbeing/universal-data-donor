@@ -4,11 +4,29 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#25384A" />
     <meta
       name="description"
-      content="Universal Digital Donor"
+      content="Donate your data for academic research. Review it in your browser, delete anything you like, and nothing is sent until you choose to donate."
     />
+    <!-- Link previews (Slack, WhatsApp, iMessage, social). Crawlers do not run JavaScript, so these
+         are static, and og:image / og:url must be absolute. Regenerate public/social-preview.png
+         (1200x630) if the logo or tagline changes; platforms cache previews, so a change can take a while to show. -->
+    <link rel="canonical" href="https://iemabot.surrey.ac.uk/datadonation/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Universal Data Donor" />
+    <meta property="og:title" content="Universal Data Donor" />
+    <meta
+      property="og:description"
+      content="Donate your data for academic research. Review it in your browser, delete anything you like, and nothing is sent until you choose to donate."
+    />
+    <meta property="og:url" content="https://iemabot.surrey.ac.uk/datadonation/" />
+    <meta property="og:image" content="https://iemabot.surrey.ac.uk/datadonation/social-preview.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Universal Data Donor: donate your data for academic research" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
@@ -28,7 +46,7 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>Universal Digital Donor</title>
+    <title>Universal Data Donor: donate your data for academic research</title>
     <!-- Cloudflare Turnstile (bot protection for the donation submit step) -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   </head>

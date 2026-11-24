@@ -1,4 +1,4 @@
-/** Site header text comes from `public/header.json` ({ title, tagline }); null (no header) when missing. */
+/** Site header text comes from `public/config/header.json` ({ title, tagline }); null (no header) when missing. */
 const text = (value, max = 120) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 
 export const sanitizeHeader = (raw) => {
@@ -9,7 +9,7 @@ export const sanitizeHeader = (raw) => {
 
 export const loadHeader = async () => {
   try {
-    const response = await fetch(`${process.env.PUBLIC_URL}/header.json`);
+    const response = await fetch(`${process.env.PUBLIC_URL}/config/header.json`);
     if (!response.ok) return null;
     return sanitizeHeader(await response.json());
   } catch (error) {

@@ -45,7 +45,7 @@ describe('ConsentPage data scope', () => {
 });
 
 describe('Google Takeout consent (real config)', () => {
-  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config-googletakeout.json'), 'utf8'));
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config/platforms/googletakeout.json'), 'utf8'));
 
   test('names every requested service, says others are not read, and that only a subset is', () => {
     renderWith(config);
@@ -108,7 +108,7 @@ describe('ConsentPage sections', () => {
 });
 
 describe('Google Takeout consent: who, storage, use and withdrawal (real config)', () => {
-  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config-googletakeout.json'), 'utf8'));
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config/platforms/googletakeout.json'), 'utf8'));
   const pageText = () => document.body.textContent;
 
   test('names the University of Surrey as controller and gives a contact', () => {
@@ -154,9 +154,9 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
 // platforms). Check each against the DPO's advice and the ethics application, then update the
 // configs and the assertions below if they differ.
 describe('every platform consent discloses controller, storage, use and withdrawal', () => {
-  const publicDir = path.join(__dirname, '../../public');
+  const publicDir = path.join(__dirname, '../../public/config/platforms');
   const configs = fs.readdirSync(publicDir)
-    .filter((name) => /^config-.+\.json$/.test(name))
+    .filter((name) => /\.json$/.test(name))
     .map((name) => [name, JSON.parse(fs.readFileSync(path.join(publicDir, name), 'utf8'))]);
   // Platforms that collect health data, a special category under UK GDPR Article 9.
   const HEALTH = ['applehealth', 'fitbit', 'garmin', 'googlefit', 'googletakeout', 'healthconnect', 'samsunghealth'];
@@ -181,7 +181,7 @@ describe('every platform consent discloses controller, storage, use and withdraw
     expect(consent.agreementPoints[0]).toMatch(/^you explicitly and voluntarily agree/);
     expect(config.page.thankyou.saveId).toMatch(/only way to find your donation/);
 
-    const health = HEALTH.includes(config.general.platformId || name.replace(/^config-|\.json$/g, ''));
+    const health = HEALTH.includes(config.general.platformId || name.replace(/\.json$/, ''));
     expect(/Article 9\(2\)\(j\)/.test(text)).toBe(health);
     expect(/health data/.test(consent.agreementPoints[0])).toBe(health);
   });
@@ -214,7 +214,7 @@ describe('ConsentPage study details from the URL', () => {
 
   test('the real Takeout config states its ethics status and ignores the URL code', () => {
     visit('?ethics=FAKE-APPROVAL');
-    const real = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config-googletakeout.json'), 'utf8'));
+    const real = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config/platforms/googletakeout.json'), 'utf8'));
     renderWith(real);
     expect(screen.getByTestId('ethics-statement')).toHaveTextContent(/awaiting review by the University of Surrey's ethics committee/);
     expect(document.body.textContent).not.toMatch(/FAKE-APPROVAL/);
@@ -235,7 +235,7 @@ describe('ConsentPage study details from the URL', () => {
 
   test('works with the real Takeout wording', () => {
     visit('?study=Sleep%20and%20Screens');
-    const real = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config-googletakeout.json'), 'utf8'));
+    const real = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/config/platforms/googletakeout.json'), 'utf8'));
     renderWith(real);
     expect(screen.getByText(/from your Google Takeout export to our study \(Sleep and Screens\)\. We ask for/)).toBeInTheDocument();
   });

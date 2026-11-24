@@ -1,5 +1,5 @@
 /**
- * Content of the About page comes from `public/about.json` (intro paragraphs, a source-code
+ * Content of the About page comes from `public/config/about.json` (intro paragraphs, a source-code
  * link and the project team), so it can be edited without touching code.
  */
 const text = (value, max = 400) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
@@ -30,7 +30,7 @@ export const sanitizeAbout = (raw) => {
 /** Fetch the About content; null when the file is missing or unreadable. */
 export const loadAbout = async () => {
   try {
-    const response = await fetch(`${process.env.PUBLIC_URL}/about.json`);
+    const response = await fetch(`${process.env.PUBLIC_URL}/config/about.json`);
     if (!response.ok) return null;
     return sanitizeAbout(await response.json());
   } catch (error) {

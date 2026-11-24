@@ -1,26 +1,24 @@
 {
   "general": {
     "displaySubmissionId": true,
-    "platform": "Fitbit",
-    "platformId": "fitbit",
-    "parser": "fitbitParser",
-    "validator": "fitbitValidator",
-    "fileExtensions": [
-      ".zip"
-    ],
+    "platform": "Google Play Games",
+    "platformId": "android",
+    "parser": "androidParser",
+    "validator": "androidValidator",
+    "fileExtensions": [".zip"],
     "turnstileSitekey": "0x4AAAAAAEQ8u5xZ1gdrl61G"
   },
   "header": {
     "title": "Universal Digital Donor",
-    "logo": "/fitbit-logo.svg",
-    "logoAlt": "Fitbit icon"
+    "logo": "/images/platforms/android.svg",
+    "logoAlt": "Android Logo"
   },
   "page": {
     "consent": {
-      "title": "Fitbit / Google Health Wearables Study",
+      "title": "Google Play Games Study",
       "ethics": "Ethical approval: this study is awaiting review by the University of Surrey's ethics committee. Its approval reference will be shown here once approval is granted.",
-      "intro": "You are about to start the process of donating your Fitbit (Google Health) data to our study. The data that we ask you to donate will be used for academic research to gain insight into physical activity, sleep, and wellbeing behaviors. Only daily summaries are extracted: movement (steps, distance, calories, active minutes, Active Zone Minutes), heart rate, resting heart rate, heart rate variability, blood oxygen and breathing rate per day, your sleep logs, and your recorded exercises. Your name, email address, date of birth, profile, paired devices, location and GPS data, weight, nutrition, menstrual and ECG data are never read or transmitted.",
-      "process": "We will walk you through this process step by step. During this process no data is stored or sent to a server. You can filter by date, exclude exercise types, and delete rows from the data before donating. Data will only be donated and stored when you click the button \"Yes, donate\" on the page that shows your data.",
+      "intro": "You are about to start the process of donating your Google Play Games data to our study. The data that we ask you to donate will be used for academic research to gain insight into gaming behaviors and platform usage.",
+      "process": "We will walk you through this process step by step. During this process no data is stored or sent to a server. You can delete rows from the data before donating. Data will only be donated and stored when you click the button \"Yes, donate\" on the page that shows your data.",
       "sections": [
         {
           "title": "Who is running this study",
@@ -52,7 +50,7 @@
         {
           "title": "How your data is used and shared",
           "paragraphs": [
-            "Your donation is pseudonymised, not anonymous. It is not stored with your name or email address, but detailed records with exact times (for example your steps, workouts, heart rate or sleep) could in principle be linked to you by someone who already knows a lot about you. For that reason:"
+            "Your donation is pseudonymised, not anonymous. It is not stored with your name or email address, but detailed records with exact times (for example when and for how long you played each game) could in principle be linked to you by someone who already knows a lot about you. For that reason:"
           ],
           "items": [
             "the individual records you donate stay with the University of Surrey research team and are not published or shared with anyone else;",
@@ -64,7 +62,7 @@
           "paragraphs": [
             "Taking part is voluntary. You can stop at any point before you click \"Yes, donate\", and nothing will be sent.",
             "After donating, you can withdraw within 1 month: email t.foldes@surrey.ac.uk with your submission ID and we will delete your donation. Keep the ID safe. We do not know who you are, so the ID is the only way to find your donation. After 1 month your data may already be part of our analyses, and it can no longer be withdrawn.",
-            "The University of Surrey processes your data under UK data protection law (UK GDPR) as a task in the public interest (Article 6(1)(e)). Health data, such as heart rate and sleep, is a special category of personal data, so it is processed for scientific research purposes (Article 9(2)(j)) with safeguards, including encryption and pseudonymisation. Research ethics also requires your explicit consent, which is why we ask for it below.",
+            "The University of Surrey processes your data under UK data protection law (UK GDPR) as a task in the public interest (Article 6(1)(e)), with safeguards including encryption and pseudonymisation. Research ethics also requires your explicit consent, which is why we ask for it below.",
             "The University's information governance page explains your data protection rights and how to contact its Data Protection Officer. You also have the right to complain to the Information Commissioner's Office (ico.org.uk)."
           ],
           "links": [
@@ -81,7 +79,7 @@
       ],
       "donationAgreement": "By clicking the button \"Yes, donate\":",
       "agreementPoints": [
-        "you explicitly and voluntarily agree to donate the data shown on the review page, including health data such as your activity, heart rate or sleep, for this research.",
+        "you explicitly and voluntarily agree to donate the data shown on the review page for this research.",
         "you understand that your donation is pseudonymised, not anonymous, that the individual records stay with the research team, and that only aggregate results will be published.",
         "you understand that you can withdraw your donation within 1 month by emailing your submission ID to t.foldes@surrey.ac.uk, and not after that."
       ],
@@ -90,24 +88,25 @@
     },
     "upload": {
       "title": "Upload File",
-      "intro": "Please request a copy of your Fitbit data through Google Takeout: go to takeout.google.com, click \"Deselect all\", tick only \"Fitbit\" (called \"Google Health\" on newer accounts), and create the export as a .zip file. Google will email you a download link, usually within a few hours. Download the .zip file and upload it here without unpacking it. If Google split your export into several .zip files, upload the one that contains the Fitbit / Google Health folder.",
+      "intro": "Please follow the download instructions and choose the Google Takeout file that you stored on your device.",
       "uploadButton": "Upload file",
       "selectedFile": "Selected file: ",
-      "processing": "Processing your file... This may take a few moments for large exports.",
-      "noDataFound": "No Fitbit Data Found",
-      "incorrectFile": "The uploaded file might be incorrect, corrupted, or void of Fitbit data.",
-      "possibleIssues": "We were unable to find any recognizable Fitbit data in the uploaded file. This could mean:",
+      "processing": "Processing your file... This may take a few moments.",
+      "noDataFound": "No Google Play Games Data Found",
+      "incorrectFile": "The uploaded file might be incorrect, corrupted, or void of Google Play Games data.",
+      "possibleIssues": "We were unable to find any recognizable Google Play Games data in the uploaded file. This could mean:",
       "issuePoints": [
-        "The file is not a Google Takeout export that includes Fitbit / Google Health",
-        "Your export was split into several .zip files and this part does not contain the Fitbit folder",
-        "The export was unpacked and re-zipped, changing its folder structure",
+        "The file is not a Google Takeout export",
+        "The file does not contain Google Play Games Services data",
+        "The file format has changed",
         "The file is corrupted or incomplete",
-        "Your account has no activity, sleep, or exercise data"
+        "The wrong file was selected",
+        "The file contains no actual playtime data"
       ],
       "unparseableSheets": "Unparseable data:",
-      "checkFile": "Please check that you have uploaded the original Takeout .zip containing the Fitbit / Google Health folder or contact the researchers for assistance.",
+      "checkFile": "Please check that you have uploaded the correct Google Takeout file or contact the researchers for assistance.",
       "tryAgainButton": "Try Again",
-      "note": "Note: The process to extract the correct data from the file is done on your own computer. No data is stored or sent yet. Extraction may take a while for large exports.",
+      "note": "Note: The process to extract the correct data from the file is done on your own computer. No data is stored or sent yet. Extraction may take several seconds depending on the data size.",
       "processingButton": "Processing...",
       "proceedButton": "Proceed"
     },
@@ -115,9 +114,7 @@
       "loading": "Loading...",
       "loadingData": "Loading data...",
       "dataOverview": "Data overview",
-      "intro": "Determine whether you would like to donate the data below. Carefully check the data and adjust when required. You can filter by date range and exclude specific exercise types. With your donation you contribute to the previously described research. Thank you in advance.",
-      "excludeLabel": "Exclude exercise types",
-      "excludePlaceholder": "Select exercise types to remove",
+      "intro": "Determine whether you would like to donate the data below. Carefully check the data and adjust when required. With your donation you contribute to the previously described research. Thank you in advance.",
       "deleteSelectedRows": "Delete selected rows",
       "donationPrompt": "Do you want to donate the above data?",
       "donateButton": "Yes, donate",
