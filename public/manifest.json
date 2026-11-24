@@ -1,6 +1,6 @@
 {
-  "short_name": "Universal Digital Donor",
-  "name": "Universal Digital Donor",
+  "short_name": "Universal Data Donor",
+  "name": "Universal Data Donor",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#FD4141",
-  "background_color": "#FFFEFE"
+  "theme_color": "#25384A",
+  "background_color": "#FFFFFF"
 }
