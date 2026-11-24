@@ -302,7 +302,7 @@ once to point Caddy at the containers. Manual deploy or rollback on the host:
 ### Recent Updates
 - **Colour themes**: the look is set by `public/themes/<name>.json` (University of Surrey by default; `?theme=default` for the neutral one; see [Colour themes](#colour-themes))
 - **About page**: `/about` describes the tool and lists the project team, edited in `public/about.json` (see [About page](#about-page))
-- **Footer**: organisation, address with map link, phone, contact and legal links and an automatic © year, set in `public/footer.json` (see [Footer](#footer))
+- **Footer**: a brand block (logo, name, tagline, © year, GitHub link) and Support / Legal link columns, set in `public/footer.json` (see [Footer](#footer))
 - **Study details in the URL**: optional `?study=` and `?ethics=` parameters appear in parentheses after "our study" on the consent page and are saved as `studyInfo` in the donation (see [Study details in the URL](#study-details-in-the-url-optional))
 - **Play Movies & TV**: the Google Takeout parser now reads the watchlist and viewing history (titles and dates)
 - **Google Takeout logo**: a neutral tile showing a box of mixed items, so it does not suggest a single service
@@ -436,25 +436,33 @@ between the two panels. Code: `src/components/Header.js`, `src/utils/headerConfi
 
 ### Footer
 
-Every page ends with a footer: phone, a contact link (email), legal links (data protection, cookies, disclaimer, accessibility),
-an "About" link and "© <current year> <copyright holder>" (the year updates itself). It takes its
+Every page ends with a footer. On the left is the brand block (logo, name, tagline, "© <current year>
+<copyright holder>" and a GitHub icon); on the right are link columns, by default **Support** (About,
+email, phone, GitHub issues) and **Legal** (data protection, cookies, disclaimer, accessibility). It takes its
 colours from the active theme and stacks into one column on phones.
 
-- **Edit it:** the content is `public/footer.json` (`organisation` heading, `copyright` holder, `address` lines,
-  `map`, `phone`, `contact` and a list of `links`, each `{label, href}`). It
-  currently shows the developer's work phone and email, with no postal address.
-  An optional `organisation`, `address` and `map` block is supported if one is wanted
-  later.
-  Delete the file to show no footer.
+- **Edit it:** the content is `public/footer.json`: `brand` (`name`, `tagline`, `logo`, a file under
+  `public/` such as `/logo-mark.png` or an `https:` URL), `copyright` holder, `github` (an `https:` link) and
+  `columns` (up to four, each `{ "title", "links": [...] }`). Delete the file to show no footer.
 - The copyright line names the project (`copyright`, matching the MIT licence), **not**
   the organisation: "© University of Surrey" would state that the university owns or
   endorses the site. The line is omitted when `copyright` is empty.
 - Links may be `https:`, `http:`, `tel:`, `mailto:` or an in-app path such as `/about`;
   anything else, and entries with no label, are ignored. Web links open in a new tab.
-- "Contact us" is a `mailto:` link to the project's contact address (currently the
-  main developer's university email). To use a contact page or form instead, change
-  `contact.href`. To point participants at the study's participant information or
-  privacy notice, add it under `links`.
+- **Phone and email are hidden from scrapers.** Put them in a column's `links` as
+  `{ "kind": "phone" | "contact", "reveal": "Show phone number", "encoded": "<base64>" }` (`contact` is an
+  email address), so neither the number nor the address is in `footer.json` or in the page HTML. The footer shows a button; pressing it
+  decodes the value, replaces the button with a real `tel:`/`mailto:` link and moves focus
+  to it (keyboard and screen-reader friendly). To change one, encode the new value:
+  `printf '%s' 'name@example.ac.uk' | base64` and paste the result into `encoded`.
+  A value that does not decode to a phone number or an email address is dropped.
+  This stops harvesters that read the page or the JSON; it does not stop a bot that runs
+  the page, presses the button and decodes it, and it cannot hide anything already in
+  the git history or on other public pages. The plain `{label, href}` form still works for
+  a contact page or form. To point participants at the study's
+  participant information or privacy notice, add it under `links`.
+  The consent text and the Accessibility page still print the email in plain text on
+  purpose, so participants can find out how to withdraw.
 - Code: `src/components/Footer.js`, `src/utils/footerConfig.js`, `src/theme.css`.
 
 ### About page
