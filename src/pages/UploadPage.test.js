@@ -8,7 +8,7 @@ import { ConfigContext } from '../ConfigContext';
 
 // The real PlayStation config: the page reads `general` and `page.upload` from it, and the
 // assertions below check the texts it defines, so the test cannot drift from the shipped config.
-const config = require('../../public/config-playstation.json');
+const config = require('../../public/config/platforms/playstation.json');
 
 // Mock the parser factory to return a mocked parser function
 jest.mock('../utils/parserFactory');
@@ -238,7 +238,7 @@ describe('UploadPage Failsafe', () => {
 
 describe('keyboard access to the file pickers', () => {
   test('the picker buttons are real buttons that open the hidden file inputs', () => {
-    const config = require('../../public/config-googletakeout.json');
+    const config = require('../../public/config/platforms/googletakeout.json');
     render(
       <ConfigContext.Provider value={config}>
         <BrowserRouter><UploadPage setParsedData={() => {}} /></BrowserRouter>

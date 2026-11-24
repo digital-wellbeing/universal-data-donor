@@ -15,7 +15,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'playstation',
       group: 'screen',
       name: 'PlayStation',
-      logo: '/playstation-svgrepo-com.svg',
+      logo: '/images/platforms/playstation.svg',
       description: 'Donate your PlayStation gaming data',
       color: '#003791'
     },
@@ -23,7 +23,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'android',
       group: 'screen',
       name: 'Google Play Games',
-      logo: '/android-logo.svg',
+      logo: '/images/platforms/android.svg',
       description: 'Donate your Google Play Games data',
       color: '#1E7F4F' // darker than Android green so labels meet 4.5:1 contrast
     },
@@ -31,7 +31,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'activitywatch',
       group: 'screen',
       name: 'ActivityWatch',
-      logo: '/activitywatch-logo.svg',
+      logo: '/images/platforms/activitywatch.svg',
       description: 'Donate your ActivityWatch usage data',
       color: '#5C5CD6'
     },
@@ -39,7 +39,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'googlefit',
       group: 'health',
       name: 'Google Fit',
-      logo: '/googlefit-logo.svg',
+      logo: '/images/platforms/googlefit.svg',
       description: 'Donate your Google Fit activity data',
       color: '#1A73E8'
     },
@@ -47,7 +47,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'garmin',
       group: 'health',
       name: 'Garmin',
-      logo: '/garmin-logo.svg',
+      logo: '/images/platforms/garmin.svg',
       description: 'Donate your Garmin wearable health data',
       color: '#006BB6'
     },
@@ -55,7 +55,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'applehealth',
       group: 'health',
       name: 'Apple Health',
-      logo: '/applehealth-logo.svg',
+      logo: '/images/platforms/applehealth.svg',
       description: 'Donate your iPhone and Apple Watch health data',
       color: '#E0234E'
     },
@@ -63,7 +63,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'healthconnect',
       group: 'health',
       name: 'Health Connect',
-      logo: '/healthconnect-logo.svg',
+      logo: '/images/platforms/healthconnect.svg',
       description: 'Donate the health data your Android apps and wearables share',
       color: '#3B7A57'
     },
@@ -71,7 +71,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'fitbit',
       group: 'health',
       name: 'Fitbit',
-      logo: '/fitbit-logo.svg',
+      logo: '/images/platforms/fitbit.svg',
       description: 'Donate your Fitbit / Google Health data via Google Takeout',
       color: '#00747B' // darker than Fitbit's brand teal so labels meet 4.5:1 contrast
     },
@@ -79,7 +79,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'samsunghealth',
       group: 'health',
       name: 'Samsung Health',
-      logo: '/samsunghealth-logo.svg',
+      logo: '/images/platforms/samsunghealth.svg',
       description: 'Donate your Galaxy Watch and Samsung Health data',
       color: '#0F7A4A' // darker so labels meet 4.5:1 contrast
     },
@@ -87,7 +87,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'instagram',
       group: 'social',
       name: 'Instagram',
-      logo: '/instagram-logo.svg',
+      logo: '/images/platforms/instagram.svg',
       description: 'Donate counts of your Instagram activity (no content)',
       color: '#C13584'
     },
@@ -95,7 +95,7 @@ const PlatformSelector = ({ onSelectPlatform }) => {
       id: 'googletakeout',
       group: 'screen',
       name: 'Google Takeout',
-      logo: '/googletakeout-logo.svg',
+      logo: '/images/platforms/googletakeout.svg',
       description: 'Donate recent YouTube viewing times and Google health & gaming data',
       color: '#1A73E8'
     }
