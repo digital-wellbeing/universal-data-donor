@@ -67,7 +67,7 @@
           "title": "Who is running this study",
           "paragraphs": [
             "This study is run by researchers at the University of Surrey: Dr Tamas Foldes (Surrey Sleep Research Centre), Dr Zsofia Zavecz and Dr Oscar Ferrante (School of Psychology). The University of Surrey is the data controller, which means it is responsible for your data.",
-            "For questions, or to withdraw your donation, email REDACTED-EMAIL."
+            "For questions, or to withdraw your donation, email t.foldes@surrey.ac.uk."
           ]
         },
         {
@@ -104,13 +104,13 @@
           "title": "Your rights and how to withdraw",
           "paragraphs": [
             "Taking part is voluntary. You can stop at any point before you click \"Yes, donate\", and nothing will be sent.",
-            "After donating, you can withdraw within 1 month: email REDACTED-EMAIL with your submission ID and we will delete your donation. Keep the ID safe. We do not know who you are, so the ID is the only way to find your donation. After 1 month your data may already be part of our analyses, and it can no longer be withdrawn.",
+            "After donating, you can withdraw within 1 month: email t.foldes@surrey.ac.uk with your submission ID and we will delete your donation. Keep the ID safe. We do not know who you are, so the ID is the only way to find your donation. After 1 month your data may already be part of our analyses, and it can no longer be withdrawn.",
             "The University of Surrey processes your data under UK data protection law (UK GDPR) as a task in the public interest (Article 6(1)(e)). Health data, such as heart rate and sleep, is a special category of personal data, so it is processed for scientific research purposes (Article 9(2)(j)) with safeguards, including encryption and pseudonymisation. Research ethics also requires your explicit consent, which is why we ask for it below.",
             "The University's information governance page explains your data protection rights and how to contact its Data Protection Officer. You also have the right to complain to the Information Commissioner's Office (ico.org.uk)."
           ],
           "links": [
             { "label": "University of Surrey information governance", "href": "https://www.surrey.ac.uk/information-governance" },
-            { "label": "Email the research team: REDACTED-EMAIL", "href": "mailto:REDACTED-EMAIL" }
+            { "label": "Email the research team: t.foldes@surrey.ac.uk", "href": "mailto:t.foldes@surrey.ac.uk" }
           ]
         }
       ],
@@ -118,7 +118,7 @@
       "agreementPoints": [
         "you explicitly and voluntarily agree to donate the data shown on the review page, including health data such as heart rate, sleep and activity, for this research.",
         "you understand that your donation is pseudonymised, not anonymous, that the individual records stay with the research team, and that only aggregate results will be published.",
-        "you understand that you can withdraw your donation within 1 month by emailing your submission ID to REDACTED-EMAIL, and not after that."
+        "you understand that you can withdraw your donation within 1 month by emailing your submission ID to t.foldes@surrey.ac.uk, and not after that."
       ],
       "agreementCheckbox": "I have read and agree with the above terms.",
       "agreeButton": "I Agree"
@@ -169,7 +169,7 @@
       "successMessage": "Your data has been successfully submitted. Thank you for your contribution!",
       "submissionId": "Your Submission ID:",
       "copyId": "Copy ID",
-      "saveId": "Please save this ID. We do not know who you are, so it is the only way to find your donation. To withdraw within 1 month of today, email this ID to REDACTED-EMAIL.",
+      "saveId": "Please save this ID. We do not know who you are, so it is the only way to find your donation. To withdraw within 1 month of today, email this ID to t.foldes@surrey.ac.uk.",
       "declineMessage": "Thank you for your time. Your decision has been recorded and no data has been shared.",
       "copyToClipboard": {
         "copy": "Copy to clipboard",

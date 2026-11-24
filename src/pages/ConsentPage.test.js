@@ -114,7 +114,7 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
   test('names the University of Surrey as controller and gives a contact', () => {
     renderWith(config);
     expect(pageText()).toMatch(/University of Surrey is the data controller/);
-    expect(pageText()).toMatch(/REDACTED-EMAIL/);
+    expect(pageText()).toMatch(/t\.foldes@surrey\.ac\.uk/);
   });
 
   test('discloses the stored IP hash and browser string, encryption, Cloudflare and the 10-year retention', () => {
@@ -136,7 +136,7 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
 
   test('explains withdrawal by submission ID within 1 month, and the lawful basis', () => {
     renderWith(config);
-    expect(pageText()).toMatch(/withdraw within 1 month: email REDACTED-EMAIL with your submission ID/);
+    expect(pageText()).toMatch(/withdraw within 1 month: email t\.foldes@surrey\.ac\.uk with your submission ID/);
     expect(pageText()).toMatch(/can no longer be withdrawn/);
     expect(pageText()).toMatch(/Article 6\(1\)\(e\)/);
     expect(pageText()).toMatch(/Article 9\(2\)\(j\)/);
