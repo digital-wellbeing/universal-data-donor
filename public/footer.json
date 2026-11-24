@@ -1,34 +1,29 @@
 {
+  "brand": {
+    "name": "Universal Data Donor",
+    "tagline": "Donate your data for academic research.",
+    "logo": "/logo-mark.png"
+  },
   "copyright": "Universal Data Donor contributors",
-  "phone": {
-    "reveal": "Show phone number",
-    "encoded": "KzQ0IDE0ODMgNjg2NDgy"
-  },
-  "contact": {
-    "reveal": "Show email address",
-    "encoded": "dC5mb2xkZXNAc3VycmV5LmFjLnVr"
-  },
-  "links": [
+  "github": "https://github.com/digital-wellbeing/universal-data-donor",
+  "columns": [
     {
-      "label": "About",
-      "href": "/about"
+      "title": "Support",
+      "links": [
+        { "label": "About", "href": "/about" },
+        { "kind": "contact", "reveal": "Show email address", "encoded": "dC5mb2xkZXNAc3VycmV5LmFjLnVr" },
+        { "kind": "phone", "reveal": "Show phone number", "encoded": "KzQ0IDE0ODMgNjg2NDgy" },
+        { "label": "GitHub issues", "href": "https://github.com/digital-wellbeing/universal-data-donor/issues" }
+      ]
     },
     {
-      "label": "Data protection",
-      "href": "https://www.surrey.ac.uk/information-governance"
-    },
-    {
-      "label": "Cookies",
-      "href": "/cookies"
-    },
-    {
-      "label": "Disclaimer",
-      "href": "https://www.surrey.ac.uk/disclaimer"
-    },
-    {
-      "label": "Accessibility",
-      "href": "/accessibility"
+      "title": "Legal",
+      "links": [
+        { "label": "Data protection", "href": "https://www.surrey.ac.uk/information-governance" },
+        { "label": "Cookies", "href": "/cookies" },
+        { "label": "Disclaimer", "href": "https://www.surrey.ac.uk/disclaimer" },
+        { "label": "Accessibility", "href": "/accessibility" }
+      ]
     }
-  ],
-  "linksTitle": "Information"
+  ]
 }

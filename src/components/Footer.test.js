@@ -10,49 +10,56 @@ import { sanitizeFooter, decodeContact } from '../utils/footerConfig';
 const render = (ui) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 const full = {
-  organisation: 'Research Centre',
+  brand: { name: 'Data Donor', tagline: 'Donate your data for research.', logo: '/logo-mark.png' },
   copyright: 'Project contributors',
-  address: ['Guildford', 'Surrey GU2 7XH'],
-  map: { label: 'Map and directions', href: 'https://maps.example/x' },
-  phone: { label: '+44 (0)1483 300800', href: 'tel:+441483300800' },
-  contact: { label: 'Contact us', href: 'https://www.surrey.ac.uk/visit-university/contact' },
-  linksTitle: 'Information',
-  links: [{ label: 'About', href: '/about' }, { label: 'Cookies', href: 'https://www.surrey.ac.uk/cookies' }],
+  github: 'https://github.com/example/repo',
+  columns: [
+    {
+      title: 'Support',
+      links: [{ label: 'About', href: '/about' }, { label: 'Contact us', href: 'mailto:team@example.ac.uk' }],
+    },
+    {
+      title: 'Legal',
+      links: [{ label: 'Cookies', href: '/cookies' }, { label: 'Disclaimer', href: 'https://example.org/disclaimer' }],
+    },
+  ],
 };
 afterEach(() => { delete global.fetch; });
 const withFooter = (value) => { global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => value }); };
 
-test('shows organisation, address, map, phone, contact, legal links and the year', async () => {
+test('shows the brand block: logo, name, tagline, © year + holder and a GitHub link', async () => {
   withFooter(full);
   render(<Footer year={2031} />);
   const footer = await screen.findByRole('contentinfo');
-  expect(within(footer).getByText('Research Centre')).toBeInTheDocument();
-  expect(within(footer).getByText('Surrey GU2 7XH')).toBeInTheDocument();
-  expect(within(footer).getByRole('link', { name: 'Map and directions' })).toHaveAttribute('target', '_blank');
-  expect(within(footer).getByRole('link', { name: '+44 (0)1483 300800' })).toHaveAttribute('href', 'tel:+441483300800');
-  expect(within(footer).getByRole('link', { name: 'Contact us' })).toHaveAttribute('rel', 'noopener noreferrer');
-  expect(within(footer).getByRole('link', { name: 'Cookies' })).toBeInTheDocument();
+  expect(within(footer).getByText('Data Donor')).toBeInTheDocument();
+  expect(within(footer).getByText('Donate your data for research.')).toBeInTheDocument();
+  expect(within(footer).getByRole('presentation')).toHaveAttribute('src', expect.stringMatching(/\/logo-mark\.png$/));
   expect(footer).toHaveTextContent('© 2031 Project contributors');
-  expect(footer).not.toHaveTextContent('© 2031 Research Centre');
+  const github = within(footer).getByRole('link', { name: 'Source code on GitHub' });
+  expect(github).toHaveAttribute('href', 'https://github.com/example/repo');
+  expect(github).toHaveAttribute('target', '_blank');
 });
 
-test('Contact us can be a mailto link and does not open a new tab', async () => {
-  withFooter({ ...full, contact: { label: 'Contact us', href: 'mailto:team@example.ac.uk' } });
-  render(<Footer />);
-  const contact = await screen.findByRole('link', { name: 'Contact us' });
-  expect(contact).toHaveAttribute('href', 'mailto:team@example.ac.uk');
-  expect(contact).not.toHaveAttribute('target');
-});
-
-test('has an in-app About link (no new tab) and does not list people', async () => {
+test('renders each link column as a labelled navigation list', async () => {
   withFooter(full);
   render(<Footer />);
-  const footer = await screen.findByRole('contentinfo');
-  const about = within(footer).getByRole('link', { name: 'About' });
+  const support = await screen.findByRole('navigation', { name: 'Support' });
+  const legal = screen.getByRole('navigation', { name: 'Legal' });
+  expect(within(support).getByRole('heading', { name: 'Support' })).toBeInTheDocument();
+  expect(within(support).getAllByRole('link')).toHaveLength(2);
+  expect(within(legal).getByRole('link', { name: 'Disclaimer' })).toHaveAttribute('rel', 'noopener noreferrer');
+});
+
+test('in-app and mailto links do not open a new tab; web links do', async () => {
+  withFooter(full);
+  render(<Footer />);
+  const about = await screen.findByRole('link', { name: 'About' });
   expect(about).toHaveAttribute('href', '/about');
-  expect(about).not.toHaveAttribute('target');
-  expect(within(footer).getByText('Information')).toBeInTheDocument();
-  expect(within(footer).getByRole('link', { name: 'Cookies' })).toHaveAttribute('target', '_blank');
+  for (const name of ['About', 'Contact us', 'Cookies']) {
+    expect(screen.getByRole('link', { name })).not.toHaveAttribute('target');
+  }
+  expect(screen.getByRole('link', { name: 'Contact us' })).toHaveAttribute('href', 'mailto:team@example.ac.uk');
+  expect(screen.getByRole('link', { name: 'Disclaimer' })).toHaveAttribute('target', '_blank');
 });
 
 test('the year defaults to the current year', async () => {
@@ -61,7 +68,7 @@ test('the year defaults to the current year', async () => {
   expect(await screen.findByRole('contentinfo')).toHaveTextContent(`© ${new Date().getFullYear()}`);
 });
 
-test('no copyright line unless a copyright holder is set (the organisation is never used for it)', async () => {
+test('no copyright line unless a copyright holder is set', async () => {
   withFooter({ ...full, copyright: undefined });
   render(<Footer />);
   const footer = await screen.findByRole('contentinfo');
@@ -70,28 +77,35 @@ test('no copyright line unless a copyright holder is set (the organisation is ne
 
 test('renders nothing when the footer file is missing or fails', async () => {
   global.fetch = jest.fn().mockResolvedValue({ ok: false });
-  const { container } = render(<Footer />);
+  const { container, unmount } = render(<Footer />);
   await new Promise((r) => setTimeout(r, 0));
   expect(container).toBeEmptyDOMElement();
+  unmount();
   global.fetch = jest.fn().mockRejectedValue(new Error('x'));
-  const second = render(<Footer />);
+  const view = render(<Footer />);
   await new Promise((r) => setTimeout(r, 0));
-  expect(second.container).toBeEmptyDOMElement();
+  expect(view.container).toBeEmptyDOMElement();
 });
 
 describe('sanitizeFooter', () => {
-  test('drops links with unsafe schemes and empty entries', () => {
+  test('drops links with unsafe schemes, empty entries and empty columns', () => {
     const f = sanitizeFooter({
-      organisation: 'Org',
-      links: [{ label: 'x', href: 'javascript:alert(1)' }, { label: 'ok', href: 'https://a.example' }, { label: '', href: 'https://b.example' }],
-      phone: { label: 'p', href: 'data:text/html,x' },
+      columns: [
+        { title: 'Support', links: [{ label: 'x', href: 'javascript:alert(1)' }, { label: 'ok', href: 'https://a.example' }, { label: '', href: 'https://b.example' }] },
+        { title: 'Empty', links: [{ label: 'p', href: 'data:text/html,x' }] },
+      ],
     });
-    expect(f.links).toEqual([{ label: 'ok', href: 'https://a.example' }]);
-    expect(f.phone).toBeNull();
+    expect(f.columns).toEqual([{ title: 'Support', links: [{ label: 'ok', href: 'https://a.example' }] }]);
   });
   test('allows in-app paths but not protocol-relative URLs', () => {
-    const f = sanitizeFooter({ links: [{ label: 'a', href: '/about' }, { label: 'b', href: '//evil.example' }] });
-    expect(f.links).toEqual([{ label: 'a', href: '/about' }]);
+    const f = sanitizeFooter({ columns: [{ title: 'T', links: [{ label: 'a', href: '/about' }, { label: 'b', href: '//evil.example' }] }] });
+    expect(f.columns[0].links).toEqual([{ label: 'a', href: '/about' }]);
+  });
+  test('keeps only an https GitHub link and a public-path or https logo', () => {
+    const f = sanitizeFooter({ brand: { name: 'N', logo: 'javascript:x' }, github: 'http://github.com/x' });
+    expect(f.logo).toBe('');
+    expect(f.github).toBe('');
+    expect(sanitizeFooter({ brand: { name: 'N', logo: '/logo.png' } }).logo).toBe('/logo.png');
   });
   test('null for junk or an empty footer', () => {
     expect(sanitizeFooter(null)).toBeNull();
@@ -102,8 +116,16 @@ describe('sanitizeFooter', () => {
 describe('contact details hidden from scrapers', () => {
   const hidden = {
     ...full,
-    phone: { reveal: 'Show phone number', encoded: btoa('+44 1483 123456') },
-    contact: { reveal: 'Show email address', encoded: btoa('someone@example.ac.uk') },
+    columns: [
+      {
+        title: 'Support',
+        links: [
+          { label: 'About', href: '/about' },
+          { kind: 'phone', reveal: 'Show phone number', encoded: btoa('+44 1483 123456') },
+          { kind: 'contact', reveal: 'Show email address', encoded: btoa('someone@example.ac.uk') },
+        ],
+      },
+    ],
   };
 
   test('the phone number and email are not in the page or any link until a button is pressed', async () => {
@@ -132,19 +154,23 @@ describe('contact details hidden from scrapers', () => {
 
   test('a value that does not decode to a phone number or email is dropped, never shown', () => {
     const footer = sanitizeFooter({
-      ...full,
-      phone: { reveal: 'x', encoded: btoa('<script>alert(1)</script>') },
-      contact: { reveal: 'x', encoded: '%%%not-base64%%%' },
+      columns: [{
+        title: 'Support',
+        links: [
+          { label: 'About', href: '/about' },
+          { kind: 'phone', reveal: 'x', encoded: btoa('<script>alert(1)</script>') },
+          { kind: 'contact', reveal: 'x', encoded: '%%%not-base64%%%' },
+          { kind: 'other', reveal: 'x', encoded: btoa('+44 1483 123456') },
+        ],
+      }],
     });
-    expect(footer.phone).toBeNull();
-    expect(footer.contact).toBeNull();
+    expect(footer.columns[0].links).toEqual([{ label: 'About', href: '/about' }]);
     expect(decodeContact({ kind: 'contact', encoded: btoa('javascript:alert(1)') })).toBeNull();
   });
 
-  test('ordinary label/href contact links keep working', async () => {
-    withFooter(full);
-    render(<Footer />);
-    expect(await screen.findByRole('link', { name: '+44 (0)1483 300800' })).toHaveAttribute('href', 'tel:+441483300800');
+  test('a hidden item without a reveal label gets a sensible default', () => {
+    const footer = sanitizeFooter({ columns: [{ title: 'S', links: [{ kind: 'phone', encoded: btoa('+44 1483 123456') }] }] });
+    expect(footer.columns[0].links[0].reveal).toBe('Show phone number');
   });
 
   test('the real footer.json keeps the number and email out of plain text, and they still decode to valid values', () => {
@@ -152,9 +178,9 @@ describe('contact details hidden from scrapers', () => {
     const sha = (value) => crypto.createHash('sha256').update(value).digest('hex');
     const file = fs.readFileSync(path.join(__dirname, '../../public/footer.json'), 'utf8');
     expect(file).not.toMatch(/mailto:|tel:|@|\+\d/);
-    const real = sanitizeFooter(JSON.parse(file));
-    const phone = decodeContact(real.phone);
-    const email = decodeContact(real.contact);
+    const items = sanitizeFooter(JSON.parse(file)).columns.flatMap((c) => c.links);
+    const phone = decodeContact(items.find((l) => l.kind === 'phone'));
+    const email = decodeContact(items.find((l) => l.kind === 'contact'));
     expect(sha(phone.label)).toBe('a994f21f4a07baaed8eee24c9c8c309241d321a49bbb139dcd14544fb4b076b4');
     expect(phone.href).toBe(`tel:${phone.label.replace(/[^\d+]/g, '')}`);
     expect(sha(email.label)).toBe('df645ce638ff4c28eabd9c6db853391f04fe43736cc6fa9ed4a6d1941a681bc9');
