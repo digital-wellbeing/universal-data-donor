@@ -19,13 +19,72 @@
   "page": {
     "consent": {
       "title": "Android Health Connect Wearables Study",
+      "ethics": "Ethical approval: this study is awaiting review by the University of Surrey's ethics committee. Its approval reference will be shown here once approval is granted.",
       "intro": "You are about to start the process of donating your Android Health Connect data to our study. Health Connect gathers data from the fitness apps and wearables on your phone (for example Fitbit, Samsung Health, Google Fit, Oura or Withings). The data that we ask you to donate will be used for academic research to gain insight into physical activity, sleep, and wellbeing behaviors. Only daily summaries are extracted: movement (steps, distance, energy, floors), heart rate, heart rate variability, blood oxygen and respiration per day, nightly sleep, and your exercise sessions. The titles and notes you typed, exercise GPS routes, body measurements, nutrition, and your device details are never read or transmitted.",
       "process": "We will walk you through this process step by step. During this process no data is stored or sent to a server. You can filter by date, exclude exercise types, and delete rows from the data before donating. Data will only be donated and stored when you click the button \"Yes, donate\" on the page that shows your data.",
+      "sections": [
+        {
+          "title": "Who is running this study",
+          "paragraphs": [
+            "This study is run by researchers at the University of Surrey: Dr Tamas Foldes (Surrey Sleep Research Centre), Dr Zsofia Zavecz and Dr Oscar Ferrante (School of Psychology). The University of Surrey is the data controller, which means it is responsible for your data.",
+            "For questions, or to withdraw your donation, email t.foldes@surrey.ac.uk."
+          ]
+        },
+        {
+          "title": "What we store",
+          "paragraphs": [
+            "When you click \"Yes, donate\", we store:"
+          ],
+          "items": [
+            "the data you choose to donate on the review page, without any rows or data types you removed;",
+            "your submission ID (a random 16-digit number shown after you donate) and the date and time of your donation;",
+            "two technical details that your browser sends to every website: a scrambled code made from your IP address (the address itself is not stored), and your browser's identification string (its name, version and operating system). These are used only to block repeated or automated submissions."
+          ]
+        },
+        {
+          "title": "Storage, access and retention",
+          "paragraphs": [
+            "We do not ask for your name or email address.",
+            "Your donation is encrypted as soon as it reaches our server and is stored on servers managed by the University of Surrey. Only the research team named above holds the key that can decrypt it.",
+            "Before your donation is sent, Cloudflare, a security service, checks that you are a person and not an automated program. Cloudflare receives your IP address for this check. It is not used for advertising or analytics.",
+            "Your data will be kept for 10 years after the study ends and then deleted."
+          ]
+        },
+        {
+          "title": "How your data is used and shared",
+          "paragraphs": [
+            "Your donation is pseudonymised, not anonymous. It is not stored with your name or email address, but detailed records with exact times (for example your steps, workouts, heart rate or sleep) could in principle be linked to you by someone who already knows a lot about you. For that reason:"
+          ],
+          "items": [
+            "the individual records you donate stay with the University of Surrey research team and are not published or shared with anyone else;",
+            "publications and presentations contain only aggregate results, such as averages across many participants, from which no individual can be identified."
+          ]
+        },
+        {
+          "title": "Your rights and how to withdraw",
+          "paragraphs": [
+            "Taking part is voluntary. You can stop at any point before you click \"Yes, donate\", and nothing will be sent.",
+            "After donating, you can withdraw within 1 month: email t.foldes@surrey.ac.uk with your submission ID and we will delete your donation. Keep the ID safe. We do not know who you are, so the ID is the only way to find your donation. After 1 month your data may already be part of our analyses, and it can no longer be withdrawn.",
+            "The University of Surrey processes your data under UK data protection law (UK GDPR) as a task in the public interest (Article 6(1)(e)). Health data, such as heart rate and sleep, is a special category of personal data, so it is processed for scientific research purposes (Article 9(2)(j)) with safeguards, including encryption and pseudonymisation. Research ethics also requires your explicit consent, which is why we ask for it below.",
+            "The University's information governance page explains your data protection rights and how to contact its Data Protection Officer. You also have the right to complain to the Information Commissioner's Office (ico.org.uk)."
+          ],
+          "links": [
+            {
+              "label": "University of Surrey information governance",
+              "href": "https://www.surrey.ac.uk/information-governance"
+            },
+            {
+              "label": "Email the research team: t.foldes@surrey.ac.uk",
+              "href": "mailto:t.foldes@surrey.ac.uk"
+            }
+          ]
+        }
+      ],
       "donationAgreement": "By clicking the button \"Yes, donate\":",
       "agreementPoints": [
-        "you fully and voluntarily agree to donate your data for this research.",
-        "you are aware that when your data is used for academic publications, or made publicly available in some other form, this will be anonymous.",
-        "you are aware that you have the right to withdraw your permission."
+        "you explicitly and voluntarily agree to donate the data shown on the review page, including health data such as your activity, heart rate or sleep, for this research.",
+        "you understand that your donation is pseudonymised, not anonymous, that the individual records stay with the research team, and that only aggregate results will be published.",
+        "you understand that you can withdraw your donation within 1 month by emailing your submission ID to t.foldes@surrey.ac.uk, and not after that."
       ],
       "agreementCheckbox": "I have read and agree with the above terms.",
       "agreeButton": "I Agree"
@@ -71,7 +130,7 @@
       "successMessage": "Your data has been successfully submitted. Thank you for your contribution!",
       "submissionId": "Your Submission ID:",
       "copyId": "Copy ID",
-      "saveId": "Please save this ID for your records.",
+      "saveId": "Please save this ID. We do not know who you are, so it is the only way to find your donation. To withdraw within 1 month of today, email this ID to t.foldes@surrey.ac.uk.",
       "declineMessage": "Thank you for your time. Your decision has been recorded and no data has been shared.",
       "copyToClipboard": {
         "copy": "Copy to clipboard",

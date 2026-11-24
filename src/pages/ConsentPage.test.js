@@ -149,6 +149,40 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
   });
 });
 
+describe('every platform consent discloses controller, storage, use and withdrawal', () => {
+  const publicDir = path.join(__dirname, '../../public');
+  const configs = fs.readdirSync(publicDir)
+    .filter((name) => /^config-.+\.json$/.test(name))
+    .map((name) => [name, JSON.parse(fs.readFileSync(path.join(publicDir, name), 'utf8'))]);
+  // Platforms that collect health data, a special category under UK GDPR Article 9.
+  const HEALTH = ['applehealth', 'fitbit', 'garmin', 'googlefit', 'googletakeout', 'healthconnect', 'samsunghealth'];
+
+  test('finds all platform configs', () => {
+    expect(configs.length).toBeGreaterThanOrEqual(11);
+  });
+
+  test.each(configs)('%s', (name, config) => {
+    const consent = config.page.consent;
+    const text = JSON.stringify(consent);
+    expect(consent.ethics).toMatch(/ethic/i);
+    expect(text).toMatch(/University of Surrey is the data controller/);
+    expect(text).toMatch(/scrambled code made from your IP address/);
+    expect(text).toMatch(/browser's identification string/);
+    expect(text).toMatch(/kept for 10 years/);
+    expect(text).toMatch(/pseudonymised, not anonymous/);
+    expect(text).toMatch(/only aggregate results/);
+    expect(text).toMatch(/withdraw within 1 month: email t\.foldes@surrey\.ac\.uk with your submission ID/);
+    expect(text).toMatch(/Article 6\(1\)\(e\)/);
+    expect(text).not.toMatch(/will be anonymous|publicly available/);
+    expect(consent.agreementPoints[0]).toMatch(/^you explicitly and voluntarily agree/);
+    expect(config.page.thankyou.saveId).toMatch(/only way to find your donation/);
+
+    const health = HEALTH.includes(config.general.platformId || name.replace(/^config-|\.json$/g, ''));
+    expect(/Article 9\(2\)\(j\)/.test(text)).toBe(health);
+    expect(/health data/.test(consent.agreementPoints[0])).toBe(health);
+  });
+});
+
 describe('ConsentPage study details from the URL', () => {
   const { resetStudyInfo } = require('../utils/studyInfo');
   const visit = (search) => {
