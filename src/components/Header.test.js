@@ -10,13 +10,14 @@ const show = (value) => {
   return render(<MemoryRouter><Header /></MemoryRouter>);
 };
 
-test('shows the tool name as a link to the start page, the tagline and an About link', async () => {
+test('shows the tool name as a link to the start page, the tagline, a Donate link and an About link', async () => {
   show({ title: 'Universal Data Donor', tagline: 'Donate your data' });
   const header = await screen.findByRole('banner');
   expect(within(header).getByRole('link', { name: 'Universal Data Donor' })).toHaveAttribute('href', '/');
   expect(within(header).getByText('Donate your data')).toBeInTheDocument();
   expect(within(header).getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
   expect(within(header).getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
+  expect(within(header).getByRole('link', { name: 'Donate' })).toHaveAttribute('href', '/');
 });
 
 test('renders nothing when header.json is missing or has no title', async () => {

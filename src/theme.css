@@ -85,6 +85,11 @@ a { color: var(--ud-link); }
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem 1.5rem;
 }
+.ud-person { display: flex; align-items: center; gap: 0.9rem; }
+.ud-person-photo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; flex: none; }
+/* Stand-in shown for a team member without a photo (silhouette, decorative). */
+.ud-person-placeholder { display: block; overflow: hidden; background: #e9ecef; color: #adb5bd; }
+.ud-person-placeholder svg { display: block; }
 .ud-person-newrow { grid-column-start: 1; } /* starts a new row of the team grid */
 .ud-person-detail { color: #6c757d; font-size: 0.9rem; }
 
@@ -122,6 +127,7 @@ a { color: var(--ud-link); }
 .ud-header-link:hover { text-decoration: underline; }
 .ud-header-tagline { font-size: 0.9rem; opacity: 0.9; }
 .ud-header-link { text-decoration: underline; padding: 0.4rem 0; display: inline-block; }
+.ud-header-link + .ud-header-link { margin-left: 1.5rem; }
 
 /* Space between a page's card and the footer (the footer itself has no top margin, so a full-width panel can meet it). */
 .ud-app-main > .container { padding-bottom: 3rem; }

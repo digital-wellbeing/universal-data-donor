@@ -4,7 +4,7 @@ import { loadHeader } from '../utils/headerConfig';
 
 /**
  * Site header panel, the counterpart of the footer: the tool's name (a link to the start
- * page), a one-line description and a link to the About page. Text from public/config/header.json.
+ * page), a one-line description and links to the donation (start) page and the About page. Text from public/config/header.json.
  */
 export default function Header() {
   const [header, setHeader] = useState(null);
@@ -25,6 +25,7 @@ export default function Header() {
           {header.tagline && <div className="ud-header-tagline">{header.tagline}</div>}
         </div>
         <nav aria-label="Main">
+          <Link className="ud-header-link" to="/">Donate</Link>
           <Link className="ud-header-link" to="/about">About</Link>
         </nav>
       </div>
