@@ -32,6 +32,11 @@ const ThankYouPage = () => {
                   </small>
                 </div>
               )}
+              {config.page.thankyou.deleteFile && (
+                <div className="alert alert-warning text-start mt-4 mb-0" role="note" data-testid="delete-file-advice">
+                  {config.page.thankyou.deleteFile}
+                </div>
+              )}
             </>
           ) : (
             <p>{config.page.thankyou.declineMessage}</p>
