@@ -180,6 +180,7 @@ describe('every platform consent discloses controller, storage, use and withdraw
     expect(text).not.toMatch(/will be anonymous|publicly available/);
     expect(consent.agreementPoints[0]).toMatch(/^you explicitly and voluntarily agree/);
     expect(config.page.thankyou.saveId).toMatch(/only way to find your donation/);
+    expect(config.page.thankyou.deleteFile).toMatch(/maximum security.*delete the file you uploaded.*trash or recycle bin/);
 
     const health = HEALTH.includes(config.general.platformId || name.replace(/\.json$/, ''));
     expect(/Article 9\(2\)\(j\)/.test(text)).toBe(health);

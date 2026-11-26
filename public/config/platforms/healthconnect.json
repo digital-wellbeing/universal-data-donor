@@ -131,6 +131,7 @@
       "submissionId": "Your Submission ID:",
       "copyId": "Copy ID",
       "saveId": "Please save this ID. We do not know who you are, so it is the only way to find your donation. To withdraw within 1 month of today, email this ID to t.foldes@surrey.ac.uk.",
+      "deleteFile": "For maximum security, please now delete the file you uploaded everywhere it is: on the phone or computer where you saved it, in any copy you used to move it (an email you sent yourself, a cloud drive, the Downloads folder), and in the trash or recycle bin.",
       "declineMessage": "Thank you for your time. Your decision has been recorded and no data has been shared.",
       "copyToClipboard": {
         "copy": "Copy to clipboard",
