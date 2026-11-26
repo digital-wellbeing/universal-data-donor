@@ -126,10 +126,9 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
     expect(pageText()).toMatch(/kept for at least 10 years after the study ends/);
   });
 
-  test('says anonymous, and that only day-level summaries may be shared openly', () => {
+  test('says pseudonymised, and that only day-level summaries may be shared openly', () => {
     renderWith(config);
-    expect(pageText()).toMatch(/Your donation is anonymous/);
-    expect(pageText()).not.toMatch(/pseudonym/);
+    expect(pageText()).toMatch(/Your donation is pseudonymised, not anonymous/);
     expect(pageText()).toMatch(/individual records you donate stay with the University of Surrey research team/);
     expect(pageText()).toMatch(/only day-level summaries .* may be shared openly/);
   });
@@ -169,7 +168,7 @@ describe('every platform consent discloses controller, storage, use and withdraw
   const HEALTH = ['applehealth', 'fitbit', 'garmin', 'googlefit', 'googletakeout', 'healthconnect', 'samsunghealth'];
 
   // Platforms already aligned with the study's ethics application: donations are described as
-  // anonymous, only day-level summaries may be shared openly, and 10 years is a minimum.
+  // pseudonymised, only day-level summaries may be shared openly, and 10 years is a minimum.
   const DAY_LEVEL_SHARING = ['activitywatch', 'googletakeout'];
 
   test('ActivityWatch and Google Takeout make the same promises about storage, sharing and withdrawal', () => {
@@ -198,7 +197,7 @@ describe('every platform consent discloses controller, storage, use and withdraw
     expect(text).toMatch(/browser's identification string/);
     if (DAY_LEVEL_SHARING.includes(name.replace(/\.json$/, ''))) {
       expect(text).toMatch(/kept for at least 10 years/);
-      expect(text).toMatch(/Your donation is anonymous/);
+      expect(text).toMatch(/Your donation is pseudonymised, not anonymous/);
       expect(text).toMatch(/only day-level summaries/);
     } else {
       expect(text).toMatch(/kept for 10 years/);
