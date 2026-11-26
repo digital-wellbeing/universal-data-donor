@@ -170,7 +170,20 @@ describe('every platform consent discloses controller, storage, use and withdraw
 
   // Platforms already aligned with the study's ethics application: donations are described as
   // anonymous, only day-level summaries may be shared openly, and 10 years is a minimum.
-  const DAY_LEVEL_SHARING = ['googletakeout'];
+  const DAY_LEVEL_SHARING = ['activitywatch', 'googletakeout'];
+
+  test('ActivityWatch and Google Takeout make the same promises about storage, sharing and withdrawal', () => {
+    const consentOf = (file) => configs.find(([name]) => name === file)[1].page.consent;
+    const [aw, google] = [consentOf('activitywatch.json'), consentOf('googletakeout.json')];
+    const section = (consent, title) => consent.sections.find((s) => s.title === title);
+    ['Who is running this study', 'What we store'].forEach((title) => {
+      expect(section(aw, title)).toEqual(section(google, title));
+    });
+    expect(section(aw, 'Storage, access and retention').paragraphs.slice(1))
+      .toEqual(section(google, 'Storage, access and retention').paragraphs.slice(1));
+    expect(section(aw, 'How your data is used and shared').items).toEqual(section(google, 'How your data is used and shared').items);
+    expect(aw.agreementPoints.slice(1)).toEqual(google.agreementPoints.slice(1));
+  });
 
   test('finds all platform configs', () => {
     expect(configs.length).toBeGreaterThanOrEqual(11);
