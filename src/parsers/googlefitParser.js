@@ -1,4 +1,5 @@
 import { openZip } from '../utils/zipReader';
+import { withoutVitals } from '../utils/vitals';
 import { windowCutoff } from '../utils/timeWindow';
 import { parseRawStreams, RAW_WINDOW_MONTHS } from './googlefitRawStreams';
 
@@ -398,7 +399,7 @@ const mapWithConcurrency = async (items, limit, fn) => {
 };
 
 export default async function parseGoogleFitFile(file, onProgress, options = {}) {
-  const { now = Date.now(), windowMonths = RAW_WINDOW_MONTHS } = options;
+  const { now = Date.now(), windowMonths = RAW_WINDOW_MONTHS, excludeVitals = false } = options;
   const data = {};
   const parsingErrors = {
     sheetsNotFound: [],
@@ -531,7 +532,7 @@ export default async function parseGoogleFitFile(file, onProgress, options = {})
   const droppedRowCounts = {};
   const undatedRowCounts = {};
   try {
-    const raw = await parseRawStreams(zip, { onProgress, now, windowMonths });
+    const raw = await parseRawStreams(zip, { onProgress, now, windowMonths, excludeVitals });
     Object.assign(data, raw.tables);
     Object.assign(droppedRowCounts, raw.dropped);
     Object.assign(undatedRowCounts, raw.undated);
@@ -543,6 +544,12 @@ export default async function parseGoogleFitFile(file, onProgress, options = {})
       reason: `Failed to read the raw streams: ${e.message}`,
       expectedPath: 'Takeout/Fit/All Data/*.json',
     });
+  }
+
+  if (excludeVitals) {
+    for (const name of ['Daily Activity', 'Activity Sessions']) {
+      if (data[name]) data[name] = data[name].map(withoutVitals);
+    }
   }
 
   // ---- Study window for the summary tables -------------------------------

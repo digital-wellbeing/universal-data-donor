@@ -264,3 +264,45 @@ describe('review fixes (parseGoogleTakeout)', () => {
     expect(rows(result, 'Play Games - Daily Playtime').length).toBeGreaterThan(0);
   });
 });
+
+describe('parseGoogleTakeout with excludeVitals', () => {
+  const point = (value) => ({
+    fitValue: [{ value: { fpVal: value } }],
+    startTimeNanos: Date.parse('2026-11-01T09:00:00Z') * 1e6,
+    endTimeNanos: Date.parse('2026-11-01T09:00:00Z') * 1e6,
+  });
+  const stream = (type) => [`${FIT}All Data/derived_${type}_com.google.android.gms_merged.json`,
+    JSON.stringify({ 'Data Points': [point(61)] })];
+  const vitalsZip = () => makeFile(Object.fromEntries([
+    [`${FIT}Daily activity metrics/Daily activity metrics.csv`, csv(
+      'Date,Heart Minutes,Average heart rate (bpm),Max heart rate (bpm),Average oxygen saturation (%),Average weight (kg),Step count',
+      ['2026-11-01,12,70,120,97,60,8000'],
+    )],
+    [`${FIT}All Sessions/2026-10-05T10_00_00.000Z_Walking.json`, JSON.stringify({
+      fitnessActivity: 'walking', startTime: '2026-10-05T10:00:00.000Z', endTime: '2026-10-05T10:30:00.000Z', duration: '1800s',
+      aggregate: [{ metricName: 'com.google.heart_rate.summary', floatValue: 90 },
+        { metricName: 'com.google.step_count.delta', intValue: 3000 }],
+    })],
+    stream('com.google.heart_rate.bpm'),
+    stream('com.google.step_count.delta'),
+    [`${GH}Steps/steps_2026-11-01.csv`, csv('timestamp,steps,data source', ['2026-11-01T09:00:00.000Z,4000,App'])],
+    ['Takeout/Google Health/Global Export Data/resting_heart_rate-2026-11-01.json', JSON.stringify([
+      { dateTime: '11/01/26 00:00:00', value: { date: '11/01/26', value: 58 } },
+    ])],
+  ]));
+  const columns = (result) => Object.values(result.data).flatMap((table) => table.flatMap(Object.keys));
+
+  test('donates no heart, blood, breathing or body fields and keeps the activity ones', async () => {
+    const result = await parseGoogleTakeout(await vitalsZip(), undefined, opts({ excludeVitals: true }));
+    expect(Object.keys(result.data)).not.toContain('Google Fit - Raw Heart Rate');
+    expect(Object.keys(result.data)).toContain('Google Fit - Raw Steps');
+    expect(columns(result).filter((c) => /heart rate|\bHR\b|HRV|bpm|brpm|oxygen|SpO2|Respiratory|weight/i.test(c))).toEqual([]);
+    expect(columns(result)).toEqual(expect.arrayContaining(['Heart Minutes', 'Step count', 'Steps']));
+  });
+
+  test('without the option they are still read, so other studies are unchanged', async () => {
+    const result = await parseGoogleTakeout(await vitalsZip(), undefined, opts());
+    expect(Object.keys(result.data)).toContain('Google Fit - Raw Heart Rate');
+    expect(columns(result)).toEqual(expect.arrayContaining(['Average heart rate (bpm)', 'Resting HR (bpm)']));
+  });
+});
