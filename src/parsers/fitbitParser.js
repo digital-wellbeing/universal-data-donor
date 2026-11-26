@@ -1,4 +1,5 @@
 import { openZip } from '../utils/zipReader';
+import { withoutVitals } from '../utils/vitals';
 import { createCsvRecordStream } from '../utils/csv';
 import {
   fmtNum, formatDuration, dayTimestamp, Stat, SourceTotals, getOrCreate,
@@ -103,7 +104,11 @@ const pick = (totals) => {
   return Number.isFinite(best) ? best : bestHc;
 };
 
-export default async function parseFitbitFile(file, onProgress) {
+/** File kinds that hold only heart or breathing measurements. */
+const VITAL_FILE_KEYS = new Set(['hr', 'restingHr', 'hrv', 'spo2', 'resp', 'legacyHrv', 'legacySpo2', 'legacyResp']);
+
+export default async function parseFitbitFile(file, onProgress, options = {}) {
+  const { excludeVitals = false } = options;
   const data = {};
   const parsingErrors = { sheetsNotFound: [], tablesNotParsed: [] };
 
@@ -125,6 +130,7 @@ export default async function parseFitbitFile(file, onProgress) {
     const group = /\.json$/i.test(base) ? JSON_FILES : CSV_FILES;
     for (const [key, re] of Object.entries(group)) {
       if (re.test(base)) {
+        if (excludeVitals && VITAL_FILE_KEYS.has(key)) break; // never opened
         const k = group === JSON_FILES ? `json:${key}` : `csv:${key}`;
         (files[k] = files[k] || []).push(e);
         break;
@@ -445,11 +451,12 @@ export default async function parseFitbitFile(file, onProgress) {
   }
   dailyRows.sort((a, b) => a.Date.localeCompare(b.Date));
 
-  if (dailyRows.length > 0) data['Daily Activity'] = dailyRows;
+  const keep = excludeVitals ? (rows) => rows.map(withoutVitals) : (rows) => rows;
+  if (dailyRows.length > 0) data['Daily Activity'] = keep(dailyRows);
   else parsingErrors.sheetsNotFound.push('Daily activity');
   if (sleeps.length > 0) data['Sleep'] = sleeps;
   else parsingErrors.sheetsNotFound.push('Sleep');
-  if (exercises.length > 0) data['Exercise'] = exercises;
+  if (exercises.length > 0) data['Exercise'] = keep(exercises);
   else parsingErrors.sheetsNotFound.push('Exercise');
 
   return { data, parsingErrors };

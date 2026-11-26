@@ -1,5 +1,6 @@
 import { fmtNum } from '../utils/wearableFormat';
 import { windowCutoff } from '../utils/timeWindow';
+import { VITAL_FIELD } from '../utils/vitals';
 
 /**
  * Raw sample streams from a Google Takeout "Fit" export (`Fit/All Data/*.json`).
@@ -178,6 +179,7 @@ const utc = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
  * @param {number} [options.now] - upload time, epoch ms (default: now)
  * @param {number} [options.windowMonths] - default RAW_WINDOW_MONTHS
  * @param {(fraction: number) => void} [options.onProgress]
+ * @param {boolean} [options.excludeVitals] - never open the heart-rate stream
  * @returns {Promise<{tables: Object, notes: Object[], hasAllData: boolean, dropped: Object, undated: Object}>}
  *   `dropped` maps table name -> samples removed by the window (including those of
  *   unusable time); `undated` is the subset removed because their time was unusable.
@@ -186,6 +188,9 @@ export async function parseRawStreams(zip, options = {}) {
   const { now = Date.now(), windowMonths = RAW_WINDOW_MONTHS, onProgress } = options;
   const cutoff = windowCutoff(now, windowMonths);
   const selected = selectStreamFiles(zip.entries);
+  if (options.excludeVitals) {
+    RAW_STREAMS.filter((s) => VITAL_FIELD.test(s.type)).forEach((s) => selected.set(s, []));
+  }
 
   const files = [];
   for (const [stream, list] of selected) list.forEach((f) => files.push({ stream, ...f }));
