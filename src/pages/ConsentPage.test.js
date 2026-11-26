@@ -117,21 +117,28 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
     expect(pageText()).toMatch(/t\.foldes@surrey\.ac\.uk/);
   });
 
-  test('discloses the stored IP hash and browser string, encryption, Cloudflare and the 10-year retention', () => {
+  test('discloses the stored IP hash and browser string, encryption, Cloudflare and the minimum 10-year retention', () => {
     renderWith(config);
     expect(pageText()).toMatch(/scrambled code made from your IP address \(the address itself is not stored\)/);
     expect(pageText()).toMatch(/browser's identification string/);
     expect(pageText()).toMatch(/encrypted as soon as it reaches our server/);
     expect(pageText()).toMatch(/Cloudflare receives your IP address/);
-    expect(pageText()).toMatch(/kept for 10 years after the study ends/);
+    expect(pageText()).toMatch(/kept for at least 10 years after the study ends/);
   });
 
-  test('says pseudonymised, not anonymous, and that only aggregate results are published', () => {
+  test('says anonymous, and that only day-level summaries may be shared openly', () => {
     renderWith(config);
-    expect(pageText()).not.toMatch(/\bwill be anonymous\b/);
-    expect(pageText()).toMatch(/pseudonymised, not anonymous/);
-    expect(pageText()).toMatch(/only aggregate results/);
-    expect(pageText()).not.toMatch(/publicly available/);
+    expect(pageText()).toMatch(/Your donation is anonymous/);
+    expect(pageText()).not.toMatch(/pseudonym/);
+    expect(pageText()).toMatch(/individual records you donate stay with the University of Surrey research team/);
+    expect(pageText()).toMatch(/only day-level summaries .* may be shared openly/);
+  });
+
+  test('says heart and breathing data are not collected, and the parser is told to leave them out', () => {
+    renderWith(config);
+    expect(pageText()).toMatch(/We do not collect heart or breathing measurements/);
+    expect(config.page.consent.dataScope.services.map((s) => s.read).join(' ')).not.toMatch(/heart rate|oxygen|respirat/i);
+    expect(config.general.parserOptions.excludeVitals).toBe(true);
   });
 
   test('explains withdrawal by submission ID within 1 month, and the lawful basis', () => {
@@ -161,6 +168,10 @@ describe('every platform consent discloses controller, storage, use and withdraw
   // Platforms that collect health data, a special category under UK GDPR Article 9.
   const HEALTH = ['applehealth', 'fitbit', 'garmin', 'googlefit', 'googletakeout', 'healthconnect', 'samsunghealth'];
 
+  // Platforms already aligned with the study's ethics application: donations are described as
+  // anonymous, only day-level summaries may be shared openly, and 10 years is a minimum.
+  const DAY_LEVEL_SHARING = ['googletakeout'];
+
   test('finds all platform configs', () => {
     expect(configs.length).toBeGreaterThanOrEqual(11);
   });
@@ -172,9 +183,15 @@ describe('every platform consent discloses controller, storage, use and withdraw
     expect(text).toMatch(/University of Surrey is the data controller/);
     expect(text).toMatch(/scrambled code made from your IP address/);
     expect(text).toMatch(/browser's identification string/);
-    expect(text).toMatch(/kept for 10 years/);
-    expect(text).toMatch(/pseudonymised, not anonymous/);
-    expect(text).toMatch(/only aggregate results/);
+    if (DAY_LEVEL_SHARING.includes(name.replace(/\.json$/, ''))) {
+      expect(text).toMatch(/kept for at least 10 years/);
+      expect(text).toMatch(/Your donation is anonymous/);
+      expect(text).toMatch(/only day-level summaries/);
+    } else {
+      expect(text).toMatch(/kept for 10 years/);
+      expect(text).toMatch(/pseudonymised, not anonymous/);
+      expect(text).toMatch(/only aggregate results/);
+    }
     expect(text).toMatch(/withdraw within 1 month: email t\.foldes@surrey\.ac\.uk with your submission ID/);
     expect(text).toMatch(/Article 6\(1\)\(e\)/);
     expect(text).not.toMatch(/will be anonymous|publicly available/);

@@ -23,7 +23,8 @@ import parsePlayMovies, { PLAY_MOVIES_FILE } from './playMoviesParser';
  *
  * @param {File|File[]} input - One Takeout zip, or all of its parts.
  * @param {(fraction: number) => void} [onProgress]
- * @param {{windowMonths?: number, youtubeSessionGapMinutes?: number, now?: Date|number}} [options]
+ * @param {{windowMonths?: number, youtubeSessionGapMinutes?: number, excludeVitals?: boolean,
+ *   now?: Date|number}} [options]
  * @returns {Promise<{data: Object, parsingErrors: Object, metadata: {window: Object, services: string[]}}>}
  */
 
@@ -50,7 +51,9 @@ const SERVICES = [
     prefix: 'Google Fit',
     detect: /(?:^|\/)Fit\/(?:All Sessions|Daily activity metrics)\//i,
     // Fit also streams raw samples with its own window, so hand it the same one.
-    parse: (file, report, options) => parseGoogleFit(file, report, { now: options.now, windowMonths: options.windowMonths }),
+    parse: (file, report, options) => parseGoogleFit(file, report, {
+      now: options.now, windowMonths: options.windowMonths, excludeVitals: options.excludeVitals,
+    }),
   },
   {
     id: 'health',
@@ -58,7 +61,7 @@ const SERVICES = [
     prefix: 'Google Health',
     // Google renamed the Fitbit export to "Google Health"; fitbitParser reads both layouts.
     detect: /(?:^|\/)(?:Google Health|Fitbit)\//i,
-    parse: (file, report) => parseGoogleHealth(file, report),
+    parse: (file, report, options) => parseGoogleHealth(file, report, { excludeVitals: options.excludeVitals }),
   },
   {
     id: 'games',
