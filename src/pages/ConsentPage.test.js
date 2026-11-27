@@ -140,9 +140,9 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
     expect(config.general.parserOptions.excludeVitals).toBe(true);
   });
 
-  test('explains withdrawal by submission ID within 1 month, and the lawful basis', () => {
+  test('explains withdrawal by submission ID within 4 weeks, and the lawful basis', () => {
     renderWith(config);
-    expect(pageText()).toMatch(/withdraw within 1 month: email t\.foldes@surrey\.ac\.uk with your submission ID/);
+    expect(pageText()).toMatch(/withdraw within 4 weeks: email t\.foldes@surrey\.ac\.uk with your submission ID/);
     expect(pageText()).toMatch(/can no longer be withdrawn/);
     expect(pageText()).toMatch(/Article 6\(1\)\(e\)/);
     expect(pageText()).toMatch(/Article 9\(2\)\(j\)/);
@@ -151,12 +151,12 @@ describe('Google Takeout consent: who, storage, use and withdrawal (real config)
 
   test('the thank-you page says why the submission ID matters', () => {
     expect(config.page.thankyou.saveId).toMatch(/only way to find your donation/);
-    expect(config.page.thankyou.saveId).toMatch(/withdraw within 1 month/);
+    expect(config.page.thankyou.saveId).toMatch(/withdraw within 4 weeks/);
   });
 });
 
 // TODO(dpo): the consent text in public/config-*.json states 10-year retention, withdrawal within
-// 1 month, aggregate-only publication and UK GDPR Art 6(1)(e) public task (+ Art 9(2)(j) for health
+// 4 weeks, aggregate-only publication and UK GDPR Art 6(1)(e) public task (+ Art 9(2)(j) for health
 // platforms). Check each against the DPO's advice and the ethics application, then update the
 // configs and the assertions below if they differ.
 describe('every platform consent discloses controller, storage, use and withdrawal', () => {
@@ -204,7 +204,7 @@ describe('every platform consent discloses controller, storage, use and withdraw
       expect(text).toMatch(/pseudonymised, not anonymous/);
       expect(text).toMatch(/only aggregate results/);
     }
-    expect(text).toMatch(/withdraw within 1 month: email t\.foldes@surrey\.ac\.uk with your submission ID/);
+    expect(text).toMatch(/withdraw within 4 weeks: email t\.foldes@surrey\.ac\.uk with your submission ID/);
     expect(text).toMatch(/Article 6\(1\)\(e\)/);
     expect(text).not.toMatch(/will be anonymous|publicly available/);
     expect(consent.agreementPoints[0]).toMatch(/^you explicitly and voluntarily agree/);
